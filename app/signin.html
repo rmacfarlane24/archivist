@@ -1,0 +1,528 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign In - Archivist</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full space-y-8">
+      <div>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Sign in to archivist
+        </h2>
+        <p class="mt-2 text-center text-sm text-gray-600">
+          Or
+          <a href="#" class="font-medium text-blue-600 hover:text-blue-500" id="signup-link">
+            create a new account
+          </a>
+        </p>
+      </div>
+      
+      <form class="mt-8 space-y-6" id="auth-form">
+        <!-- Name field (only shown during signup) -->
+        <div id="name-field" class="hidden">
+          <label for="name" class="sr-only">Full Name</label>
+          <input id="name" name="name" type="text" autocomplete="name" 
+                 class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                 placeholder="Full Name">
+        </div>
+        
+        <!-- Email field -->
+        <div>
+          <label for="email" class="sr-only">Email address</label>
+          <input id="email" name="email" type="email" autocomplete="email" required 
+                 class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                 placeholder="Email address">
+        </div>
+        
+        <!-- Password fields -->
+        <div class="space-y-3">
+          <div class="relative">
+            <label for="password" class="sr-only">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required 
+                   class="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                   placeholder="Password">
+            <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 z-10 pointer-events-auto" tabindex="-1">
+              <svg id="eye-icon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <svg id="eye-slash-icon" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Confirm password field (only shown during signup) -->
+          <div id="confirm-password-field" class="hidden relative">
+            <label for="confirm-password" class="sr-only">Confirm Password</label>
+            <input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" 
+                   class="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                   placeholder="Confirm Password">
+            <button type="button" id="toggle-confirm-password" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 z-10 pointer-events-auto" tabindex="-1">
+              <svg id="eye-icon-confirm" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <svg id="eye-slash-icon-confirm" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="text-sm text-right">
+            <a href="#" class="font-medium text-blue-600 hover:text-blue-500" id="forgot-password">
+              Forgot your password?
+            </a>
+        </div>
+
+        <div>
+          <button type="submit" id="signin-btn"
+                  class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 opacity-50 cursor-not-allowed">
+            <span id="btn-text">Sign in</span>
+            <div id="btn-spinner" class="hidden ml-2">
+              <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+          </button>
+        </div>
+
+        <div id="error-message" class="hidden text-red-600 text-sm text-center"></div>
+        <div id="success-message" class="hidden text-green-600 text-sm text-center"></div>
+      </form>
+    </div>
+
+    <script>
+      // Check if we're in Electron environment
+      const isElectron = window.electronAPI !== undefined;
+      
+      if (!isElectron) {
+        // Fallback for web environment
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with your Supabase URL
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your Supabase anon key
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+      
+      // DOM elements
+      const authForm = document.getElementById('auth-form');
+      const signinBtn = document.getElementById('signin-btn');
+      const btnText = document.getElementById('btn-text');
+      const btnSpinner = document.getElementById('btn-spinner');
+      const signupLink = document.getElementById('signup-link');
+      const forgotPasswordLink = document.getElementById('forgot-password');
+      const errorMessage = document.getElementById('error-message');
+      const successMessage = document.getElementById('success-message');
+      
+      let isSignUp = false;
+      
+      // Function to check if form is valid and update button state
+      function updateButtonState() {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value.trim();
+        
+        let isValid = email.length > 0 && password.length > 0;
+        
+        if (isSignUp) {
+          const name = document.getElementById('name').value.trim();
+          const confirmPassword = document.getElementById('confirm-password').value.trim();
+          isValid = isValid && name.length > 0 && confirmPassword.length > 0;
+        }
+        
+        // Update button state
+        signinBtn.disabled = !isValid;
+        
+        // Update button appearance based on state
+        if (isValid) {
+          signinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          signinBtn.classList.add('hover:bg-blue-700');
+        } else {
+          signinBtn.classList.add('opacity-50', 'cursor-not-allowed');
+          signinBtn.classList.remove('hover:bg-blue-700');
+        }
+              }
+        
+        // Function to show loading state
+        function showLoadingState() {
+          signinBtn.disabled = true;
+          btnText.textContent = isSignUp ? 'Signing up...' : 'Signing in...';
+          btnSpinner.classList.remove('hidden');
+          clearMessages();
+        }
+
+        // Function to hide loading state
+        function hideLoadingState() {
+          signinBtn.disabled = false;
+          btnText.textContent = isSignUp ? 'Sign up' : 'Sign in';
+          btnSpinner.classList.add('hidden');
+        }
+        
+        // Add input event listeners for real-time validation
+      document.getElementById('email').addEventListener('input', updateButtonState);
+      document.getElementById('password').addEventListener('input', updateButtonState);
+      document.getElementById('name').addEventListener('input', updateButtonState);
+      document.getElementById('confirm-password').addEventListener('input', updateButtonState);
+      
+      // Toggle between sign in and sign up
+      signupLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        const nameField = document.getElementById('name-field');
+        const confirmPasswordField = document.getElementById('confirm-password-field');
+        
+        if (isSignUp) {
+          // Switch to sign in mode
+          document.querySelector('h2').textContent = 'Sign in to archivist';
+          signupLink.textContent = 'create a new account';
+          signinBtn.textContent = 'Sign in';
+          nameField.classList.add('hidden');
+          confirmPasswordField.classList.add('hidden');
+          isSignUp = false;
+          
+          // Clear the hidden fields when switching to sign in
+          document.getElementById('name').value = '';
+          document.getElementById('confirm-password').value = '';
+          
+          // Reset password field type to password if it was changed
+          const password = document.getElementById('password');
+          const confirmPassword = document.getElementById('confirm-password');
+          if (password.type === 'text') {
+            password.type = 'password';
+            document.getElementById('eye-icon').classList.remove('hidden');
+            document.getElementById('eye-slash-icon').classList.add('hidden');
+          }
+          if (confirmPassword.type === 'text') {
+            confirmPassword.type = 'password';
+            document.getElementById('eye-icon-confirm').classList.remove('hidden');
+            document.getElementById('eye-slash-icon-confirm').classList.add('hidden');
+          }
+        } else {
+          // Switch to sign up mode
+          document.querySelector('h2').textContent = 'Create a new account';
+          signupLink.textContent = 'sign in to existing account';
+          signinBtn.textContent = 'Sign up';
+          nameField.classList.remove('hidden');
+          confirmPasswordField.classList.remove('hidden');
+          isSignUp = true;
+        }
+        clearMessages();
+        
+        // Update button state after switching modes
+        updateButtonState();
+      });
+      
+      // Function to check trial status
+      async function checkTrialStatus() {
+        try {
+          let result;
+          if (isElectron) {
+            result = await window.electronAPI.checkTrialStatus();
+          } else {
+            // Direct Supabase query for trial status
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return { hasAccess: false, isTrialExpired: true };
+            
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('trial_ends_at, subscription_status, subscription_tier')
+              .eq('id', user.id)
+              .single();
+            
+            result = { profile };
+          }
+          
+          if (result.profile) {
+            const now = new Date();
+            const trialEnd = new Date(result.profile.trial_ends_at);
+            const hasActiveSubscription = result.profile.subscription_status === 'active';
+            
+            return {
+              hasAccess: hasActiveSubscription || now < trialEnd,
+              isTrialExpired: now >= trialEnd && !hasActiveSubscription,
+              profile: result.profile
+            };
+          }
+          
+          return { hasAccess: false, isTrialExpired: true };
+        } catch (error) {
+          console.error('Error checking trial status:', error);
+          return { hasAccess: false, isTrialExpired: true };
+        }
+      }
+
+      // Password toggle functionality
+      const togglePassword = document.getElementById('toggle-password');
+      const toggleConfirmPassword = document.getElementById('toggle-confirm-password');
+      
+      togglePassword.addEventListener('click', () => {
+        const password = document.getElementById('password');
+        const eyeIcon = document.getElementById('eye-icon');
+        const eyeSlashIcon = document.getElementById('eye-slash-icon');
+        
+        if (password.type === 'password') {
+          password.type = 'text';
+          eyeIcon.classList.add('hidden');
+          eyeSlashIcon.classList.remove('hidden');
+        } else {
+          password.type = 'password';
+          eyeIcon.classList.remove('hidden');
+          eyeSlashIcon.classList.add('hidden');
+        }
+      });
+      
+      toggleConfirmPassword.addEventListener('click', () => {
+        const confirmPassword = document.getElementById('confirm-password');
+        const eyeIcon = document.getElementById('eye-icon-confirm');
+        const eyeSlashIcon = document.getElementById('eye-slash-icon-confirm');
+        
+        if (confirmPassword.type === 'password') {
+          confirmPassword.type = 'text';
+          eyeIcon.classList.add('hidden');
+          eyeSlashIcon.classList.remove('hidden');
+        } else {
+          confirmPassword.type = 'password';
+          eyeIcon.classList.remove('hidden');
+          eyeSlashIcon.classList.add('hidden');
+        }
+      });
+      
+      // Handle form submission
+      authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearMessages();
+        
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        if (isSignUp) {
+          const name = document.getElementById('name').value;
+          const confirmPassword = document.getElementById('confirm-password').value;
+          
+          if (!name || !email || !password || !confirmPassword) {
+            showError('Please fill in all fields');
+            return;
+          }
+          
+          if (password !== confirmPassword) {
+            showError('Passwords do not match');
+            return;
+          }
+          
+          if (password.length < 6) {
+            showError('Password must be at least 6 characters long');
+            return;
+          }
+        } else {
+          if (!email || !password) {
+            showError('Please fill in all fields');
+            return;
+          }
+        }
+        
+        showLoadingState();
+        
+        try {
+          let result;
+          if (isElectron) {
+            // Use Electron API
+            if (isSignUp) {
+              const name = document.getElementById('name').value;
+              result = await window.electronAPI.authSignUp(email, password, name);
+            } else {
+              result = await window.electronAPI.authSignIn(email, password);
+            }
+          } else {
+            // Use direct Supabase client
+            if (isSignUp) {
+              const name = document.getElementById('name').value;
+              result = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                  data: { full_name: name },
+                  emailRedirectTo: 'app://auth/confirm-signup'
+                }
+              });
+            } else {
+              result = await supabase.auth.signInWithPassword({
+                email,
+                password
+              });
+            }
+          }
+          
+          // Debug logging
+          console.log('Auth result:', result);
+          console.log('Is signup:', isSignUp);
+          console.log('User data:', result.data);
+          
+          if (result.error) {
+            // Provide user-friendly error messages for common cases
+            let errorMessage = result.error.message;
+            
+            // Check for unconfirmed email error
+            if (errorMessage.toLowerCase().includes('email not confirmed') || 
+                errorMessage.toLowerCase().includes('email not verified') ||
+                errorMessage.toLowerCase().includes('invalid login credentials') ||
+                errorMessage.toLowerCase().includes('user not found')) {
+              
+              // Check if this email was recently used for signup
+              const email = document.getElementById('email').value;
+              const recentSignup = sessionStorage.getItem('recent_signup_email');
+              
+              if (recentSignup === email) {
+                errorMessage = 'Please confirm your email first! Check your inbox and click the confirmation link, then try signing in again.';
+              } else {
+                errorMessage = 'Unable to sign in. Please check your email and password, or confirm your email if you recently signed up.';
+              }
+            }
+            
+            showError(errorMessage);
+            hideLoadingState();
+          } else {
+            if (isSignUp) {
+              // For signup, don't redirect - user needs to confirm email
+              showSuccess('Account created! Please check your email and click the confirmation link. Then, return here to sign in. The email should arrive shortly, but it may take a few minutes.');
+              
+              // Store the email to detect unconfirmed sign-in attempts
+              const signupEmail = document.getElementById('email').value;
+              sessionStorage.setItem('recent_signup_email', signupEmail);
+              
+              // Clear the form
+              document.getElementById('name').value = '';
+              document.getElementById('email').value = '';
+              document.getElementById('password').value = '';
+              document.getElementById('confirm-password').value = '';
+              // Switch back to sign in mode
+              document.querySelector('h2').textContent = 'Sign in to archivist';
+              signupLink.textContent = 'create a new account';
+              signinBtn.textContent = 'Sign in';
+              isSignUp = false;
+              
+              // Hide signup-specific fields
+              document.getElementById('name-field').classList.add('hidden');
+              document.getElementById('confirm-password-field').classList.add('hidden');
+              
+              // Update button state after clearing form
+              updateButtonState();
+              hideLoadingState();
+            } else {
+              // For signin, check trial status before redirecting
+              sessionStorage.removeItem('recent_signup_email');
+              
+              // Check trial expiration
+              const trialCheck = await checkTrialStatus();
+              if (!trialCheck.hasAccess) {
+                // Redirect to subscription page instead of main app
+                window.location.href = './subscription.html?expired=true';
+                return;
+              }
+              
+              // Keep the loading state active and redirect after delay
+              setTimeout(() => {
+                window.location.href = './index.html';
+              }, 2000);
+            }
+          }
+        } catch (error) {
+          showError('An unexpected error occurred. Please try again.');
+          console.error('Auth error:', error);
+          console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          });
+          hideLoadingState();
+        }
+      });
+      
+      // Forgot password functionality
+      forgotPasswordLink.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        
+        if (!email) {
+          showError('Please enter your email address first');
+          return;
+        }
+        
+        try {
+          let result;
+          if (isElectron) {
+            // Use Electron API
+            result = await window.electronAPI.authResetPassword(email);
+          } else {
+            // Use direct Supabase client
+            result = await supabase.auth.resetPasswordForEmail(email);
+          }
+          
+          if (result.error) {
+            // Provide user-friendly error messages for password reset
+            let errorMessage = result.error.message;
+            
+            // Check for unconfirmed email error in password reset
+            if (errorMessage.toLowerCase().includes('email not confirmed') || 
+                errorMessage.toLowerCase().includes('email not verified') ||
+                errorMessage.toLowerCase().includes('user not found')) {
+              
+              errorMessage = 'Please confirm your email first before requesting a password reset. Check your inbox for the confirmation link.';
+            }
+            
+            showError(errorMessage);
+          } else {
+            showSuccess('Password reset email sent! Please check your inbox.');
+          }
+        } catch (error) {
+          showError('An error occurred while sending reset email.');
+        }
+      });
+      
+      // Helper functions
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
+      }
+      
+      function showSuccess(message) {
+        successMessage.textContent = message;
+        successMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+      }
+      
+      function clearMessages() {
+        errorMessage.classList.add('hidden');
+        successMessage.classList.add('hidden');
+      }
+      
+      // Check if user is already authenticated
+      if (isElectron) {
+        // Use Electron API
+        window.electronAPI.authGetSession().then(({ session, error }) => {
+          if (session && !error) {
+            // User is already signed in, redirect to main app
+            window.location.href = './index.html';
+          }
+        });
+      } else {
+        // Use direct Supabase client
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session) {
+            // User is already signed in, redirect to main app
+            window.location.href = './index.html';
+          }
+        });
+      }
+      
+      // Initialize button state
+      updateButtonState();
+    </script>
+  </body>
+</html> 

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Signup - Archivist</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full space-y-8">
+        <div class="text-center">
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+                Confirming your account...
+            </h2>
+            <p class="mt-2 text-sm text-gray-600" id="status-message">
+                Please wait while we verify your email address.
+            </p>
+        </div>
+        
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p id="loading-text">Verifying...</p>
+        </div>
+        
+        <div id="error-message" class="hidden text-red-600 text-sm text-center"></div>
+        <div id="success-message" class="hidden text-green-600 text-sm text-center"></div>
+        
+        <div id="success-actions" class="hidden text-center">
+            <button id="open-app-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Open Archivist App
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Get Supabase configuration from environment
+        const SUPABASE_URL = window.location.hostname === 'localhost' ? 
+            'http://localhost:54321' : // Local Supabase
+            'https://xslphflkpeyfqcwwlrih.supabase.co'; // Your actual Supabase URL
+        
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbHBoZmxrcGV5ZnFjd3dscmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzI5NzAsImV4cCI6MjA1MDU0ODk3MH0.YOUR_ACTUAL_KEY'; // Replace with your actual anon key
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const type = urlParams.get('type');
+        
+        console.log('Confirmation page loaded with:', { token, type });
+        
+        async function confirmSignup() {
+            try {
+                if (!token || type !== 'signup') {
+                    throw new Error('Invalid confirmation link');
+                }
+                
+                // Exchange the token for a session
+                const { data, error } = await supabase.auth.verifyOtp({
+                    token_hash: token,
+                    type: 'signup'
+                });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                console.log('Signup confirmed successfully:', data);
+                
+                // Show success message
+                document.getElementById('status-message').textContent = 'Account confirmed successfully!';
+                document.getElementById('loading-text').textContent = 'You can now sign in to your app!';
+                document.getElementById('success-message').textContent = 'Your account has been verified!';
+                document.getElementById('success-message').classList.remove('hidden');
+                document.getElementById('success-actions').classList.remove('hidden');
+                
+                // Store the session data
+                if (data.session) {
+                    localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
+                }
+                
+            } catch (error) {
+                console.error('Confirmation error:', error);
+                document.getElementById('status-message').textContent = 'Error confirming account';
+                document.getElementById('loading-text').textContent = 'Something went wrong';
+                document.getElementById('error-message').textContent = error.message;
+                document.getElementById('error-message').classList.remove('hidden');
+            }
+        }
+        
+        // Handle opening the app
+        document.getElementById('open-app-btn').addEventListener('click', () => {
+            // Try to open the app using the app:// protocol
+            window.location.href = 'app://auth/confirmed';
+        });
+        
+        // Start confirmation process when page loads
+        document.addEventListener('DOMContentLoaded', confirmSignup);
+    </script>
+</body>
+</html>

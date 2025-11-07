@@ -1,0 +1,85 @@
+import { useState, useEffect } from 'react';
+import { useAuthEnhanced, useAuthErrorRecovery } from './contexts/AuthContext';
+import { useSubscription } from './contexts/SubscriptionContext';
+import { ErrorRecoveryModal } from './components/ErrorRecoveryModal';
+import { StorageStatusIndicator } from './components/StorageStatusIndicator';
+import SubscriptionGuard from './components/SubscriptionGuard';
+import App from './App';
+
+interface AuthWrapperProps {
+  darkMode: boolean;
+  setDarkMode: (darkMode: boolean) => void;
+}
+
+const AuthWrapper: React.FC<AuthWrapperProps> = ({ darkMode }) => {
+  const { 
+    loading, 
+    signOut, 
+    isDataLoaded,
+    hasError,
+    state
+  } = useAuthEnhanced();
+  
+  const { loading: subscriptionLoading } = useSubscription();
+  const { canRecover, canRetry } = useAuthErrorRecovery();
+  
+  const [showErrorModal, setShowErrorModal] = useState(false);
+
+  // Show error modal when there's an error and recovery is available
+  useEffect(() => {
+    if (hasError && (canRecover || canRetry)) {
+      setShowErrorModal(true);
+    }
+  }, [hasError, canRecover, canRetry]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Only show the main app when the state is DATA_LOADED (Phase 4 complete)
+  
+  // If user is anonymous, redirect to sign-in page
+  if (state?.state === 'ANONYMOUS') {
+    window.location.href = './signin.html';
+    return null;
+  }
+  
+  // Show loading while authentication or subscription data is loading
+  if (loading || !isDataLoaded || subscriptionLoading) {
+    const loadingMessage = loading || !isDataLoaded ? 'Loading authentication...' : 'Loading subscription...';
+    
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-custom-gray text-custom-white' : 'bg-custom-white text-custom-black'}`}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400 mx-auto mb-4"></div>
+          <p>{loadingMessage}</p>
+          <div className="mt-4">
+            <StorageStatusIndicator />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // User is authenticated, use SubscriptionGuard for comprehensive subscription handling
+  return (
+    <>
+      <SubscriptionGuard
+        darkMode={darkMode}
+        onSignOut={handleSignOut}
+      >
+        <App onSignOut={handleSignOut} />
+      </SubscriptionGuard>
+      <ErrorRecoveryModal 
+        isOpen={showErrorModal} 
+        onClose={() => setShowErrorModal(false)} 
+      />
+    </>
+  );
+};
+
+export default AuthWrapper; 

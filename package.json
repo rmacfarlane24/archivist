@@ -1,0 +1,74 @@
+{
+  "name": "archivist",
+  "version": "1.0.0",
+  "description": "Electron desktop app for managing external hard drive metadata",
+  "main": "lib/main.js",
+  "homepage": "./",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite build --mode development --watch",
+    "dev:electron": "NODE_ENV=development tsc -p tsconfig.electron.json && NODE_ENV=development electron .",
+    "build": "npm run build:vite && npm run build:electron",
+    "build:vite": "vite build --mode production",
+    "build:electron": "NODE_ENV=production tsc -p tsconfig.electron.json",
+    "build:dev": "npm run build:vite:dev && npm run build:electron:dev",
+    "build:vite:dev": "vite build --mode development",
+    "build:electron:dev": "NODE_ENV=development tsc -p tsconfig.electron.json",
+    "package": "npm run build && electron-builder",
+    "package:win": "npm run build && electron-builder --win",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:linux": "npm run build && electron-builder --linux",
+    "test:build": "npm run build && npm run test:production",
+    "test:production": "NODE_ENV=production electron .",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "electron",
+    "typescript",
+    "react",
+    "json-storage",
+    "archivist"
+  ],
+  "author": "Ross MacFarlane",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.9.1",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.53.0",
+    "better-sqlite3": "^9.6.0",
+    "dotenv": "^17.2.1",
+    "fs-extra": "^11.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-virtuoso": "^4.14.0"
+  },
+  "build": {
+    "appId": "com.example.archivist",
+    "productName": "Archivist",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "lib/**/*",
+      "app/dist/**/*",
+      "node_modules/**/*"
+    ]
+  }
+}
