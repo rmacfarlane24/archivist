@@ -1,5 +1,8 @@
 # Archivist - Folder Metadata Manager
 
+> **Status**: Ready for initial code review 🔍  
+> This codebase represents the complete Archivist desktop application with all core features implemented.
+
 A cross-platform Electron desktop application for scanning and managing metadata from folders and directories. Built with TypeScript, React, and Supabase for secure cloud storage with Row-Level Security (RLS).
 
 ## Features
