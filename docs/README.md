@@ -1,8 +1,5 @@
 # Archivist - Folder Metadata Manager
 
-> **Status**: Ready for initial code review 🔍  
-> This codebase represents the complete Archivist desktop application with all core features implemented.
-
 A cross-platform Electron desktop application for scanning and managing metadata from folders and directories. Built with TypeScript, React, and Supabase for secure cloud storage with Row-Level Security (RLS).
 
 ## Features
@@ -65,10 +62,14 @@ ARCH/
 
 ## Installation
 
+### For End Users
+**[📥 Download Archivist](https://rmacfarlane24.github.io/archivist/download.html)** - Get the latest release for your platform.
+
+### For Developers
 1. **Clone or download the project**
    ```bash
-   git clone <repository-url>
-   cd ARCH
+   git clone https://github.com/rmacfarlane24/archivist.git
+   cd archivist
    ```
 
 2. **Install dependencies**

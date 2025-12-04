@@ -1,9 +1,70 @@
 // Load environment variables first, before any other imports
+import * as path from 'path';
 import * as dotenv from 'dotenv';
-dotenv.config();
+import { existsSync } from 'fs';
+
+// Function to find and load the environment file
+function loadEnvironmentFile() {
+  const possiblePaths = [];
+  
+  if (process.env.NODE_ENV === 'production') {
+    // Try multiple possible locations for packaged apps
+    possiblePaths.push(
+      path.join(process.resourcesPath, '.env.production'),
+      path.join(__dirname, '../.env.production'),
+      path.join(process.cwd(), '.env.production'),
+      path.join(path.dirname(process.execPath), '.env.production'),
+      path.join(path.dirname(process.execPath), 'resources', '.env.production'),
+      // Additional paths for app.asar structure
+      path.join(__dirname, '../../.env.production'),
+      path.join(__dirname, '../../../.env.production'),
+      // Try relative to the app bundle
+      path.join(path.dirname(path.dirname(__dirname)), '.env.production')
+    );
+  } else {
+    // Development mode
+    possiblePaths.push(
+      path.resolve(__dirname, '../.env'),
+      path.resolve(__dirname, '../.env.production')
+    );
+  }
+  
+  console.log('Environment loading debug:', {
+    NODE_ENV: process.env.NODE_ENV,
+    __dirname: __dirname,
+    'process.cwd()': process.cwd(),
+    'process.execPath': process.execPath,
+    'process.resourcesPath': process.resourcesPath
+  });
+  
+  // Try to find the first existing environment file
+  for (const envPath of possiblePaths) {
+    console.log(`Trying path: ${envPath}`);
+    if (existsSync(envPath)) {
+      console.log(`Loading environment from: ${envPath}`);
+      dotenv.config({ path: envPath });
+      return;
+    }
+  }
+  
+  console.error('No environment file found. Tried paths:', possiblePaths);
+  
+  // If no file is found, try to load from current working directory as fallback
+  dotenv.config();
+}
+
+loadEnvironmentFile();
+
+// Ensure critical environment variables are set for packaged apps
+if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_SUPABASE_URL) {
+  // Fallback values for packaged apps
+  process.env.REACT_APP_SUPABASE_URL = 'https://xslphflkpeyfqcwwlrih.supabase.co';
+  process.env.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbHBoZmxrcGV5ZnFjd3dscmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNzkwNTgsImV4cCI6MjA2ODg1NTA1OH0.WICKm7rDZ899epi_0Nz7N435V2WEQI5sNxSzCoJ40EQ';
+  console.log('Applied fallback environment variables for packaged app');
+}
 
 import { app, BrowserWindow, ipcMain, dialog, protocol, shell } from 'electron';
-import * as path from 'path';
+import { autoUpdater } from 'electron-updater';
 import * as fs from 'fs-extra';
 import * as http from 'http';
 import { exec } from 'child_process';
@@ -3398,6 +3459,46 @@ ipcMain.handle('admin-backup-user-data', async (event, userId: string) => {
   }
 });
 
+// Auto-updater IPC handlers
+ipcMain.handle('updater-check-for-updates', async () => {
+  try {
+    if (process.env.NODE_ENV === 'development') {
+      return { available: false, message: 'Updates disabled in development' };
+    }
+    const result = await autoUpdater.checkForUpdates();
+    return { available: result !== null, version: result?.updateInfo?.version };
+  } catch (error) {
+    console.error('Error checking for updates:', error);
+    return { available: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
+ipcMain.handle('updater-download-update', async () => {
+  try {
+    if (process.env.NODE_ENV === 'development') {
+      return { success: false, message: 'Updates disabled in development' };
+    }
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (error) {
+    console.error('Error downloading update:', error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
+ipcMain.handle('updater-install-update', async () => {
+  try {
+    if (process.env.NODE_ENV === 'development') {
+      return { success: false, message: 'Updates disabled in development' };
+    }
+    autoUpdater.quitAndInstall();
+    return { success: true };
+  } catch (error) {
+    console.error('Error installing update:', error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
 // Protocol registration removed - using simple web confirmation instead
 function registerAppProtocol() {
   // No protocol registration needed for Option 3
@@ -3425,11 +3526,61 @@ function handleAppProtocol() {
   console.log('Using simple web confirmation - no protocol handling needed');
 }
 
+// Auto-updater configuration (only for production builds)
+function configureAutoUpdater() {
+  if (process.env.NODE_ENV === 'development') {
+    log('debug', 'Auto-updater disabled in development mode');
+    return;
+  }
+
+  // Configure auto-updater
+  autoUpdater.logger = console;
+  autoUpdater.autoDownload = false; // Don't auto-download, let user decide
+  // Manual update checking (don't call checkForUpdatesAndNotify automatically)
+
+  // Auto-updater event handlers
+  autoUpdater.on('checking-for-update', () => {
+    log('info', 'Checking for application updates...');
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    log('info', 'Update available:', info.version);
+    // TODO: Notify user via main window or system notification
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    log('debug', 'Application is up to date');
+  });
+
+  autoUpdater.on('error', (err) => {
+    log('error', 'Auto-updater error:', err);
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    log('info', `Download progress: ${Math.round(progress.percent)}%`);
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    log('info', 'Update downloaded - restart required to apply');
+    // TODO: Notify user and prompt for restart
+  });
+
+  // Check for updates on startup (with delay to ensure app is fully loaded)
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      log('warn', 'Failed to check for updates:', err);
+    });
+  }, 10000); // 10 second delay
+}
+
 // App lifecycle
 app.whenReady().then(async () => {
   try {
     registerAppProtocol();
     handleAppProtocol();
+    
+    // Initialize auto-updater (production only)
+    configureAutoUpdater();
     
     // Storage manager will be initialized when user authenticates
     // No anonymous storage initialization - storage only for authenticated users

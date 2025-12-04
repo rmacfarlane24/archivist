@@ -215,6 +215,11 @@ declare global {
       
       getStreamingConfig: () => Promise<{ success: boolean; config: any }>;
       debugScanMethods: () => Promise<{ success: boolean; message: string; availableMethods: string[]; error?: string }>;
+      
+      // Auto-updater functions
+      updaterCheckForUpdates: () => Promise<{ available: boolean; version?: string; message?: string; error?: string }>;
+      updaterDownloadUpdate: () => Promise<{ success: boolean; message?: string; error?: string }>;
+      updaterInstallUpdate: () => Promise<{ success: boolean; message?: string; error?: string }>;
     };
   }
 }

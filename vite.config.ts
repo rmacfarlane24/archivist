@@ -36,6 +36,8 @@ export default defineConfig(({ mode }) => {
   // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), '')
 
+
+
   return {
     plugins: [react(), copyHtmlFiles()],
     base: './',
@@ -44,23 +46,21 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       emptyOutDir: true,
       watch: mode === 'development' ? {} : null,
-      // Ensure environment variables are embedded in production builds
       rollupOptions: {
         output: {
-          // Preserve environment variables in the build
           manualChunks: undefined
         }
       }
     },
-    // Environment variable configuration for both development and production
+    // Make environment variables available to the client code
     define: {
-      // Make all REACT_APP_ prefixed environment variables available
-      'process.env.REACT_APP_SUPABASE_URL': JSON.stringify(env.REACT_APP_SUPABASE_URL),
-      'process.env.REACT_APP_SUPABASE_ANON_KEY': JSON.stringify(env.REACT_APP_SUPABASE_ANON_KEY),
-      // Add any other REACT_APP_ variables that might be needed
-      'process.env.NODE_ENV': JSON.stringify(mode),
-      // Ensure these are always available
-      'process.env.MODE': JSON.stringify(mode)
-    }
+      // Use import.meta.env format for Vite
+      'import.meta.env.REACT_APP_SUPABASE_URL': JSON.stringify(env.REACT_APP_SUPABASE_URL),
+      'import.meta.env.REACT_APP_SUPABASE_ANON_KEY': JSON.stringify(env.REACT_APP_SUPABASE_ANON_KEY),
+      'import.meta.env.NODE_ENV': JSON.stringify(mode),
+      'import.meta.env.MODE': JSON.stringify(mode)
+    },
+    // Also configure envPrefix to allow REACT_APP_ variables
+    envPrefix: ['VITE_', 'REACT_APP_']
   }
 }) 

@@ -1342,7 +1342,7 @@ function App({ onSignOut }: AppProps) {
             
             <!-- Cancel Button -->
             <div class="flex justify-start space-x-3">
-              <button id="scan-cancel-btn" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
+              <button id="scan-cancel-btn" class="px-6 py-3 bg-white hover:bg-gray-50 text-red-600 border border-red-600 font-semibold rounded-lg transition-colors dark:bg-gray-100 dark:hover:bg-gray-200">
                 Cancel
               </button>
             </div>
@@ -2107,7 +2107,7 @@ function App({ onSignOut }: AppProps) {
           
           <!-- Cancel Button -->
           <div class="flex justify-start">
-            <button id="scan-cancel-btn" class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
+            <button id="scan-cancel-btn" class="px-6 py-3 bg-white hover:bg-gray-50 text-red-600 border border-red-600 font-semibold rounded-lg transition-colors dark:bg-gray-100 dark:hover:bg-gray-200">
               Cancel
             </button>
           </div>
@@ -3205,7 +3205,7 @@ function App({ onSignOut }: AppProps) {
         <>
       {/* Unified Header for both view modes */}
       <div className="w-full max-w-[95vw] lg:max-w-[75vw] mx-auto px-2 sm:px-4 pt-4 pb-0">
-  <div className={`rounded-t-lg p-2 sm:p-4 ${effectiveDarkMode ? 'bg-custom-black' : 'bg-custom-white'}`}>
+  <div className={`rounded-t-lg p-2 sm:p-4 ${effectiveDarkMode ? 'bg-custom-black' : 'bg-custom-white'} shadow-md`}>
           <div className="flex items-center justify-between gap-4 min-w-0 overflow-x-auto overflow-y-visible">
             {/* Left: title + actions */}
             <div className="flex items-center space-x-2 sm:space-x-3 pl-2 sm:pl-6 flex-shrink-0 min-w-0">
@@ -3397,7 +3397,7 @@ function App({ onSignOut }: AppProps) {
       <div className="flex flex-1 min-h-0">
         {/* Single unified container for both views */}
         <div className="w-full max-w-[95vw] lg:max-w-[75vw] mx-auto px-2 sm:px-4 pb-4 pt-0">
-          <div className={`rounded-b-lg p-2 sm:p-4 ${effectiveDarkMode ? 'bg-custom-black' : 'bg-custom-white'} overflow-x-auto`}>
+          <div className={`rounded-b-lg p-2 sm:p-4 ${effectiveDarkMode ? 'bg-custom-black' : 'bg-custom-white'} overflow-x-auto shadow-md`}>
             
             {/* Render views based on visibleViews array */}
             <div className="h-[80vh] overflow-auto">

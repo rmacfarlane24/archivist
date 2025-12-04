@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Archivist</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        .download-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .download-btn {
+            display: inline-block;
+            background: #007AFF;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-top: 1rem;
+        }
+        .download-btn:hover {
+            background: #0056CC;
+        }
+        .warning {
+            background: #FFF3CD;
+            border: 1px solid #FFEAA7;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>📁 Archivist - Download</h1>
+    <p>Folder metadata manager for external drives and directories.</p>
+
+    <div class="warning">
+        <strong>⚠️ Security Notice:</strong> This app is not code-signed. Your system may show security warnings. 
+        This is normal - right-click and select "Open" to bypass the warning.
+    </div>
+
+    <div class="download-grid">
+        <div class="download-card">
+            <h3>🍎 macOS</h3>
+            <p>macOS 10.15+ (Intel & Apple Silicon)</p>
+            <a href="#" class="download-btn" id="mac-download">Download for macOS</a>
+            <p><small>Right-click → Open to bypass Gatekeeper</small></p>
+        </div>
+
+        <div class="download-card">
+            <h3>🪟 Windows</h3>
+            <p>Windows 10/11 (64-bit)</p>
+            <a href="#" class="download-btn" id="win-download">Download for Windows</a>
+            <p><small>Click "More info" → "Run anyway" if prompted</small></p>
+        </div>
+
+        <div class="download-card">
+            <h3>🐧 Linux</h3>
+            <p>Ubuntu/Debian (AppImage)</p>
+            <a href="#" class="download-btn" id="linux-download">Download for Linux</a>
+            <p><small>Make executable: chmod +x *.AppImage</small></p>
+        </div>
+    </div>
+
+    <h2>📋 Installation Instructions</h2>
+    
+    <h3>macOS</h3>
+    <ol>
+        <li>Download the .dmg file</li>
+        <li>Open the .dmg and drag Archivist to Applications</li>
+        <li>Right-click Archivist in Applications → "Open"</li>
+        <li>Click "Open" in the security dialog</li>
+    </ol>
+
+    <h3>Windows</h3>
+    <ol>
+        <li>Download the .exe installer</li>
+        <li>Run the installer (click "More info" → "Run anyway" if prompted)</li>
+        <li>Follow the installation wizard</li>
+    </ol>
+
+    <h3>Linux</h3>
+    <ol>
+        <li>Download the .AppImage file</li>
+        <li>Make it executable: <code>chmod +x Archivist-*.AppImage</code></li>
+        <li>Run: <code>./Archivist-*.AppImage</code></li>
+    </ol>
+
+    <script>
+        // Auto-detect latest release and populate download links
+        const owner = 'rmacfarlane24';
+        const repo = 'archivist';
+        
+        fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`)
+            .then(response => response.json())
+            .then(data => {
+                const assets = data.assets;
+                
+                // Find platform-specific downloads
+                const macAsset = assets.find(asset => asset.name.includes('.dmg'));
+                const winAsset = assets.find(asset => asset.name.includes('.exe'));
+                const linuxAsset = assets.find(asset => asset.name.includes('.AppImage'));
+                
+                // Update download links
+                if (macAsset) document.getElementById('mac-download').href = macAsset.browser_download_url;
+                if (winAsset) document.getElementById('win-download').href = winAsset.browser_download_url;
+                if (linuxAsset) document.getElementById('linux-download').href = linuxAsset.browser_download_url;
+            })
+            .catch(error => {
+                console.error('Error fetching releases:', error);
+                // Fallback to GitHub releases page
+                const fallbackUrl = `https://github.com/${owner}/${repo}/releases/latest`;
+                document.querySelectorAll('.download-btn').forEach(btn => {
+                    btn.href = fallbackUrl;
+                    btn.textContent = 'View on GitHub';
+                });
+            });
+    </script>
+</body>
+</html>

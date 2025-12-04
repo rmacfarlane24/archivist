@@ -3,24 +3,32 @@
   "version": "1.0.0",
   "description": "Electron desktop app for managing external hard drive metadata",
   "main": "lib/main.js",
-  "homepage": "./",
+  "homepage": "https://rmacfarlane24.github.io/archivist",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rmacfarlane24/archivist.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rmacfarlane24/archivist/issues"
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite build --mode development --watch",
-    "dev:electron": "NODE_ENV=development tsc -p tsconfig.electron.json && NODE_ENV=development electron .",
+    "dev:electron": "cross-env NODE_ENV=development tsc -p tsconfig.electron.json && cross-env NODE_ENV=development electron .",
     "build": "npm run build:vite && npm run build:electron",
-    "build:vite": "vite build --mode production",
-    "build:electron": "NODE_ENV=production tsc -p tsconfig.electron.json",
+    "build:vite": "cross-env NODE_ENV=production vite build --mode production",
+    "build:electron": "cross-env NODE_ENV=production tsc -p tsconfig.electron.json",
     "build:dev": "npm run build:vite:dev && npm run build:electron:dev",
-    "build:vite:dev": "vite build --mode development",
-    "build:electron:dev": "NODE_ENV=development tsc -p tsconfig.electron.json",
-    "package": "npm run build && electron-builder",
-    "package:win": "npm run build && electron-builder --win",
-    "package:mac": "npm run build && electron-builder --mac",
-    "package:linux": "npm run build && electron-builder --linux",
+    "build:vite:dev": "cross-env NODE_ENV=development vite build --mode development",
+    "build:electron:dev": "cross-env NODE_ENV=development tsc -p tsconfig.electron.json",
+    "package": "npm run build && cross-env NODE_ENV=production electron-builder",
+    "package:win": "npm run build && cross-env NODE_ENV=production electron-builder --win",
+    "package:mac": "npm run build && cross-env NODE_ENV=production electron-builder --mac",
+    "package:linux": "npm run build && cross-env NODE_ENV=production electron-builder --linux",
     "test:build": "npm run build && npm run test:production",
-    "test:production": "NODE_ENV=production electron .",
-    "postinstall": "electron-builder install-app-deps"
+    "test:production": "cross-env NODE_ENV=production electron .",
+    "clean": "rimraf dist build app/dist lib",
+    "postinstall": "electron-rebuild"
   },
   "keywords": [
     "electron",
@@ -43,9 +51,12 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
     "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
     "electron": "^28.3.3",
     "electron-builder": "^24.9.1",
+    "electron-rebuild": "^3.2.9",
     "postcss": "^8.4.32",
+    "rimraf": "^6.1.0",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.10"
@@ -54,13 +65,14 @@
     "@supabase/supabase-js": "^2.53.0",
     "better-sqlite3": "^9.6.0",
     "dotenv": "^17.2.1",
+    "electron-updater": "^6.6.2",
     "fs-extra": "^11.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-virtuoso": "^4.14.0"
   },
   "build": {
-    "appId": "com.example.archivist",
+    "appId": "com.rossmacfarlane.archivist",
     "productName": "Archivist",
     "directories": {
       "output": "dist"
@@ -68,7 +80,67 @@
     "files": [
       "lib/**/*",
       "app/dist/**/*",
-      "node_modules/**/*"
-    ]
+      "node_modules/**/*",
+      "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!node_modules/*.d.ts",
+      "!node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+    ],
+    "extraResources": [
+      ".env.production"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dir",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "dmg": {
+      "background": null,
+      "format": "ULFO"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Utility"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "rmacfarlane24",
+      "repo": "archivist"
+    }
   }
 }

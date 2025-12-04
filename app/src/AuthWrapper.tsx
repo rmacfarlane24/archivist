@@ -34,7 +34,15 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ darkMode }) => {
 
   const handleSignOut = async () => {
     try {
+      // Clear subscription cache to prevent stale data
+      localStorage.removeItem('subscription_cached_status');
+      localStorage.removeItem('subscription_last_check');
+      localStorage.removeItem('subscription_config');
+      
       await signOut();
+      
+      // Force redirect to sign in page
+      window.location.href = './signin.html';
     } catch (error) {
       console.error('Error signing out:', error);
     }

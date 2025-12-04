@@ -152,4 +152,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBackupFileTree: (backupId: string) => ipcRenderer.invoke('get-backup-file-tree', backupId),
   listBackupRoot: (backupId: string) => ipcRenderer.invoke('list-backup-root', backupId),
   listBackupChildren: (backupId: string, parentPath: string, limit?: number, offset?: number) => ipcRenderer.invoke('list-backup-children', backupId, parentPath, limit, offset),
+  
+  // Auto-updater functions
+  updaterCheckForUpdates: () => ipcRenderer.invoke('updater-check-for-updates'),
+  updaterDownloadUpdate: () => ipcRenderer.invoke('updater-download-update'),
+  updaterInstallUpdate: () => ipcRenderer.invoke('updater-install-update'),
 }); 

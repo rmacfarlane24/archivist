@@ -1,0 +1,19 @@
+# Placeholder Icon File
+
+This is a placeholder for the app icon (icon.png).
+
+## Required Icon Files:
+- icon.ico (Windows) - 256x256 pixels
+- icon.icns (macOS) - Multiple sizes in ICNS format  
+- icon.png (Linux) - 512x512 pixels
+
+## Creating Real Icons:
+1. Design your app icon as a 1024x1024 PNG
+2. Use tools like:
+   - png2icons.com (online converter)
+   - Icon Composer (macOS)
+   - GIMP with appropriate plugins
+
+## Important:
+Replace this placeholder with actual icon files before packaging for distribution.
+The current package.json references these files in the electron-builder configuration.

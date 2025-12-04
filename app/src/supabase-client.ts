@@ -2,16 +2,21 @@ import { createClient } from '@supabase/supabase-js';
 
 // Client-side Supabase configuration
 // Environment variables are embedded by Vite during build
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const SUPABASE_URL = import.meta.env.REACT_APP_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.REACT_APP_SUPABASE_ANON_KEY;
 
 // Validate environment variables
 if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-  throw new Error('REACT_APP_SUPABASE_URL environment variable is not set. Please check your .env file.');
+  throw new Error(`REACT_APP_SUPABASE_URL environment variable is not set. 
+    Current value: ${SUPABASE_URL || 'undefined'}
+    Available env vars: ${Object.keys(import.meta.env).join(', ')}
+    Please check your .env.production file and rebuild.`);
 }
 
 if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
-  throw new Error('REACT_APP_SUPABASE_ANON_KEY environment variable is not set. Please check your .env file.');
+  throw new Error(`REACT_APP_SUPABASE_ANON_KEY environment variable is not set.
+    Current value: ${SUPABASE_ANON_KEY ? 'set but invalid' : 'undefined'}
+    Please check your .env.production file and rebuild.`);
 }
 
 // console.log('Client-side Supabase configuration loaded:', {

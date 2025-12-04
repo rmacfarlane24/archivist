@@ -1,23 +1,66 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Ensure dotenv is loaded
+// Environment variables are loaded by main.ts, but we still need this for redundancy
 import * as dotenv from 'dotenv';
+import * as path from 'path';
+import { existsSync } from 'fs';
+
+// Try to load environment file if not already loaded
+if (!process.env.REACT_APP_SUPABASE_URL) {
+  const envPaths = [
+    path.join(process.resourcesPath || '', '.env.production'),
+    path.join(__dirname, '../.env.production'),
+    path.join(__dirname, '../../.env.production'),
+    path.resolve(__dirname, '../.env.production')
+  ];
+  
+  for (const envPath of envPaths) {
+    if (existsSync(envPath)) {
+      console.log(`Supabase module loading environment from: ${envPath}`);
+      dotenv.config({ path: envPath });
+      break;
+    }
+  }
+  
+  // Final fallback - set directly for packaged apps
+  if (!process.env.REACT_APP_SUPABASE_URL && process.env.NODE_ENV === 'production') {
+    process.env.REACT_APP_SUPABASE_URL = 'https://xslphflkpeyfqcwwlrih.supabase.co';
+    process.env.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbHBoZmxrcGV5ZnFjd3dscmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNzkwNTgsImV4cCI6MjA2ODg1NTA1OH0.WICKm7rDZ899epi_0Nz7N435V2WEQI5sNxSzCoJ40EQ';
+    console.log('Applied fallback environment variables in supabase module');
+  }
+}
+
 dotenv.config();
 
 // Import the custom storage adapter for Electron
 import { ElectronStorageAdapter } from './electron-storage-adapter';
 
-// Supabase configuration
+// Supabase configuration (Node/Electron uses process.env)
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
+// Log successful configuration load
+if (process.env.LOG_LEVEL === 'debug') {
+  console.log('Environment debug info:', {
+    NODE_ENV: process.env.NODE_ENV,
+    SUPABASE_URL_SET: !!SUPABASE_URL,
+    SUPABASE_KEY_SET: !!SUPABASE_ANON_KEY
+  });
+}
+
 // Validate environment variables
 if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-  throw new Error('REACT_APP_SUPABASE_URL environment variable is not set. Please check your .env file.');
+  throw new Error(`REACT_APP_SUPABASE_URL environment variable is not set. 
+    Current value: ${SUPABASE_URL || 'undefined'}
+    Please ensure .env.production file is properly loaded.
+    Current working directory: ${process.cwd()}
+    Script location: ${__dirname}`);
 }
 
 if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
-  throw new Error('REACT_APP_SUPABASE_ANON_KEY environment variable is not set. Please check your .env file.');
+  throw new Error(`REACT_APP_SUPABASE_ANON_KEY environment variable is not set.
+    Current value: ${SUPABASE_ANON_KEY ? 'set but invalid' : 'undefined'}
+    Please ensure .env.production file is properly loaded.`);
 }
 
 // Only log in debug mode to avoid exposing sensitive info
