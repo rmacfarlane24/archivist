@@ -27,29 +27,10 @@ jobs:
           cache: 'npm'
       
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       
-      - name: Check environment variables (development)
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: node test-env-vars.js
-        continue-on-error: true
-        env:
-          REACT_APP_SUPABASE_URL: https://xslphflkpeyfqcwwlrih.supabase.co
-          REACT_APP_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbHBoZmxrcGV5ZnFjd3dscmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNzkwNTgsImV4cCI6MjA2ODg1NTA1OH0.WICKm7rDZ899epi_0Nz7N435V2WEQI5sNxSzCoJ40EQ
-      
-      - name: Run TypeScript compilation check
-        run: |
-          npm run build:electron
-          npm run build:vite
-        env:
-          REACT_APP_SUPABASE_URL: https://xslphflkpeyfqcwwlrih.supabase.co
-          REACT_APP_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbHBoZmxrcGV5ZnFjd3dscmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNzkwNTgsImV4cCI6MjA2ODg1NTA1OH0.WICKm7rDZ899epi_0Nz7N435V2WEQI5sNxSzCoJ40EQ
-          NODE_ENV: production
-      
-      - name: Test production build (without packaging)
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: node test-production-build.js
-        continue-on-error: true
+      - name: Build application
+        run: npm run build
         env:
           REACT_APP_SUPABASE_URL: https://xslphflkpeyfqcwwlrih.supabase.co
           REACT_APP_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbHBoZmxrcGV5ZnFjd3dscmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNzkwNTgsImV4cCI6MjA2ODg1NTA1OH0.WICKm7rDZ899epi_0Nz7N435V2WEQI5sNxSzCoJ40EQ
@@ -59,11 +40,15 @@ jobs:
       - name: Package applications (unsigned)
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          npm run package:mac
-          npm run package:win  
-          npm run package:linux
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            npm run package:mac
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            npm run package:win
+          else
+            npm run package:linux
+          fi
+        shell: bash
         env:
-          # Skip code signing for web distribution
           CSC_IDENTITY_AUTO_DISCOVERY: false
           REACT_APP_SUPABASE_URL: https://xslphflkpeyfqcwwlrih.supabase.co
           REACT_APP_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbHBoZmxrcGV5ZnFjd3dscmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNzkwNTgsImV4cCI6MjA2ODg1NTA1OH0.WICKm7rDZ899epi_0Nz7N435V2WEQI5sNxSzCoJ40EQ
