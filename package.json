@@ -1,6 +1,6 @@
 {
   "name": "archivist",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Electron desktop app for managing external hard drive metadata",
   "main": "lib/main.js",
   "homepage": "https://rmacfarlane24.github.io/archivist",
