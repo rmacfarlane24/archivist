@@ -11,15 +11,54 @@ async function testProductionBuild() {
   try {
     console.log('📋 Checking build files...');
     
-    const buildFiles = [
+    // Check for required directories and key files
+    const requiredDirs = [
+      'app/dist',
+      'app/dist/assets',
+      'lib'
+    ];
+    
+    const requiredFiles = [
       'app/dist/index.html',
-      'app/dist/assets/index-1Vovt8A0.js',
-      'app/dist/assets/index-BoweOwKx.css',
       'lib/main.js'
     ];
+    
+    // Check directories
+    for (const dir of requiredDirs) {
+      if (fs.existsSync(dir)) {
+        console.log(`✅ Directory ${dir} exists`);
+      } else {
+        console.log(`❌ Directory ${dir} missing`);
+        allFilesExist = false;
+      }
+    }
+    
+    // Check for CSS and JS files (with dynamic names)
+    const assetsDir = 'app/dist/assets';
+    if (fs.existsSync(assetsDir)) {
+      const assets = fs.readdirSync(assetsDir);
+      const hasJS = assets.some(file => file.startsWith('index-') && file.endsWith('.js'));
+      const hasCSS = assets.some(file => file.startsWith('index-') && file.endsWith('.css'));
+      
+      if (hasJS) {
+        console.log(`✅ JavaScript bundle found`);
+      } else {
+        console.log(`❌ JavaScript bundle missing`);
+        allFilesExist = false;
+      }
+      
+      if (hasCSS) {
+        console.log(`✅ CSS bundle found`);
+      } else {
+        console.log(`❌ CSS bundle missing`);
+        allFilesExist = false;
+      }
+    }
 
     let allFilesExist = true;
-    for (const file of buildFiles) {
+    
+    // Check required files
+    for (const file of requiredFiles) {
       if (fs.existsSync(file)) {
         console.log(`✅ ${file} exists`);
       } else {
@@ -35,8 +74,17 @@ async function testProductionBuild() {
 
     console.log('\n📋 Checking environment variables in build...');
     
-    // Check if environment variables are embedded
-    const jsBundlePath = 'app/dist/assets/index-1Vovt8A0.js';
+    // Find the actual JS bundle file
+    const assetsDirPath = 'app/dist/assets';
+    const assetFiles = fs.readdirSync(assetsDirPath);
+    const jsFile = assetFiles.find(file => file.startsWith('index-') && file.endsWith('.js'));
+    
+    if (!jsFile) {
+      console.log('❌ Could not find JS bundle file');
+      return false;
+    }
+    
+    const jsBundlePath = path.join(assetsDirPath, jsFile);
     const jsContent = fs.readFileSync(jsBundlePath, 'utf8');
     
     // Check for embedded environment variables
