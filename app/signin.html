@@ -231,7 +231,7 @@
             
             const { data: profile } = await supabase
               .from('profiles')
-              .select('trial_ends_at, subscription_status, subscription_tier')
+              .select('trial_ends_at, subscription_status, subscription_tier, access_granted, plan, subscription_ends_at')
               .eq('id', user.id)
               .single();
             
@@ -240,12 +240,23 @@
           
           if (result.profile) {
             const now = new Date();
-            const trialEnd = new Date(result.profile.trial_ends_at);
+            const trialEnd = result.profile.trial_ends_at ? new Date(result.profile.trial_ends_at) : null;
             const hasActiveSubscription = result.profile.subscription_status === 'active';
+            const hasAccessGranted = result.profile.access_granted === true;
+            const hasValidPlan = result.profile.plan && result.profile.plan !== 'free';
+            
+            // User has access if: they have access_granted=true AND (no trial OR trial not expired) OR valid subscription
+            const trialExpired = trialEnd && now >= trialEnd;
+            const hasValidAccess = hasAccessGranted && !trialExpired;  // access_granted must be true AND trial not expired
+            const hasValidSubscription = hasValidPlan && hasActiveSubscription;
+            const hasActiveTrial = trialEnd && now < trialEnd;
+            
+            const hasAccess = hasValidAccess || hasValidSubscription || hasActiveTrial;
+            const isTrialExpired = trialExpired;
             
             return {
-              hasAccess: hasActiveSubscription || now < trialEnd,
-              isTrialExpired: now >= trialEnd && !hasActiveSubscription,
+              hasAccess: hasAccess,
+              isTrialExpired: isTrialExpired,
               profile: result.profile
             };
           }
@@ -413,11 +424,16 @@
               // Update button state after clearing form
               updateButtonState();
               hideLoadingState();
-            } else {
-              // For signin, check trial status before redirecting
-              sessionStorage.removeItem('recent_signup_email');
-              
-              // Check trial expiration
+        } else {
+          // For signin, check trial status before redirecting
+          sessionStorage.removeItem('recent_signup_email');
+          
+          // Clear any cached subscription data to prevent stale data issues
+          localStorage.removeItem('subscription_cached_status');
+          localStorage.removeItem('subscription_last_check');
+          localStorage.removeItem('subscription_config');
+          localStorage.removeItem('archivist_subscription_status');
+          sessionStorage.clear();              // Check trial expiration
               const trialCheck = await checkTrialStatus();
               if (!trialCheck.hasAccess) {
                 // Redirect to subscription page instead of main app

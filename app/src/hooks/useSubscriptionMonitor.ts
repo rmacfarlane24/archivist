@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuthEnhanced } from '../contexts/AuthContext';
 import {
   SubscriptionStatus,
   SubscriptionEventCallback,
@@ -59,7 +59,7 @@ interface UseSubscriptionMonitorResult {
 export function useSubscriptionMonitor(
   onStatusChange?: SubscriptionEventCallback
 ): UseSubscriptionMonitorResult {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isDataLoaded } = useAuthEnhanced();
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
@@ -78,8 +78,8 @@ export function useSubscriptionMonitor(
    * Perform subscription status check
    */
   const performStatusCheck = useCallback(async (forceOnlineCheck: boolean = false) => {
-    if (!user) {
-
+    // Don't check subscription until auth data is fully loaded
+    if (!user || !isDataLoaded) {
       setSubscriptionStatus(null);
       setIsLoading(false);
       return;
@@ -173,7 +173,7 @@ export function useSubscriptionMonitor(
       setIsChecking(false);
       setIsLoading(false);
     }
-  }, [user, signOut, onStatusChange]);
+  }, [user, signOut, onStatusChange, isDataLoaded]);
 
   /**
    * Refresh subscription status (force online check)
@@ -265,11 +265,13 @@ export function useSubscriptionMonitor(
     return null;
   }, [subscriptionStatus]);
 
-  // Initial status check when user changes
+  // Initial status check when user and data are ready
   useEffect(() => {
-
-    performStatusCheck(false);
-  }, [performStatusCheck]);
+    // Only perform initial check when auth data is fully loaded
+    if (isDataLoaded) {
+      performStatusCheck(false);
+    }
+  }, [performStatusCheck, isDataLoaded]);
 
   // Set up periodic checking during active sessions
   useEffect(() => {

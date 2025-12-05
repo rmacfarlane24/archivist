@@ -20,7 +20,7 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ darkMode }) => {
     state
   } = useAuthEnhanced();
   
-  const { loading: subscriptionLoading } = useSubscription();
+  // Note: Removed subscriptionLoading dependency as SubscriptionGuard handles its own loading
   const { canRecover, canRetry } = useAuthErrorRecovery();
   
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -56,15 +56,13 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ darkMode }) => {
     return null;
   }
   
-  // Show loading while authentication or subscription data is loading
-  if (loading || !isDataLoaded || subscriptionLoading) {
-    const loadingMessage = loading || !isDataLoaded ? 'Loading authentication...' : 'Loading subscription...';
-    
+  // Show loading while authentication data is loading
+  if (loading || !isDataLoaded) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-custom-gray text-custom-white' : 'bg-custom-white text-custom-black'}`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400 mx-auto mb-4"></div>
-          <p>{loadingMessage}</p>
+          <p>Loading authentication...</p>
           <div className="mt-4">
             <StorageStatusIndicator />
           </div>

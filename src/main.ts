@@ -71,7 +71,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { PerDriveStorage } from './per-drive-storage';
 import type { DriveInfo, FileInfo, SearchResult } from './types';
-import { auth } from './supabase';
+import { auth, supabase } from './supabase';
 import { supabaseAdmin } from './supabase-admin';
 
 // Logging configuration
@@ -2985,8 +2985,17 @@ ipcMain.handle('check-trial-status', async () => {
       return { profile: null };
     }
 
-    // Use the admin getUserById method which already handles the profile query
-    const profile = await supabaseAdmin.getUserById(user.id);
+    // Use regular supabase client instead of admin client for profile query
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      return { profile: null };
+    }
     return { profile };
   } catch (error) {
     console.error('Error in check-trial-status handler:', error);
