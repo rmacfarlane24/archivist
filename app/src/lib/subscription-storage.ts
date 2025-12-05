@@ -35,7 +35,6 @@ export function updateLocalSubscriptionData(subscription: EnhancedUserSubscripti
     localStorage.setItem(SUBSCRIPTION_STORAGE_KEYS.LAST_CHECK, new Date().toISOString());
 
     console.log('[Local Storage] Updated subscription data', {
-      userId: subscription.userId,
       status: subscription.subscriptionStatus,
       endDate: subscription.localData.endDate?.toISOString(),
       lastSync: subscription.lastSync.toISOString()
@@ -86,6 +85,8 @@ export function shouldPromptForRefresh(): boolean {
     if (!lastCheck) return true;
 
     const lastCheckTime = new Date(lastCheck);
+    if (isNaN(lastCheckTime.getTime())) return true;
+    
     const now = new Date();
     const timeSinceLastCheck = now.getTime() - lastCheckTime.getTime();
 
@@ -107,6 +108,8 @@ export function getTimeSinceLastCheck(): number | null {
     if (!lastCheck) return null;
 
     const lastCheckTime = new Date(lastCheck);
+    if (isNaN(lastCheckTime.getTime())) return null;
+    
     const now = new Date();
     return now.getTime() - lastCheckTime.getTime();
   } catch (error) {

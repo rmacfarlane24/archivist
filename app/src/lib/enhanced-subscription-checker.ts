@@ -91,31 +91,6 @@ export async function checkSubscriptionStatus(
     } catch (error) {
       console.error('[Enhanced Subscription Check] Online check failed:', error);
       
-      // If we can't check online and subscription might be expired, deny access
-      if (localEndDate && now >= localEndDate) {
-        return {
-          isValid: false,
-          status: 'expired',
-          requiresReauth: true,
-          message: 'Unable to verify subscription status. Please connect to the internet.',
-          isSubscribed: false,
-          isTrialing: false,
-          isExpired: true,
-          isOverdue: false,
-          trialDaysRemaining: 0,
-          subscriptionDaysRemaining: 0,
-          gracePeriodDaysRemaining: 0,
-          subscriptionEndsAt: null,
-          trialEndsAt: null,
-          gracePeriodEnd: null,
-          paymentFailed: false,
-          lastPaymentDate: null,
-          lastPaymentFailure: null,
-          plan: 'free',
-          accessGranted: false
-        };
-      }
-
       // If we have valid cached data and no imminent expiry, allow access
       if (cachedData && localEndDate && now < localEndDate) {
 
