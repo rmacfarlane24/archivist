@@ -1,4 +1,4 @@
-name: Build and Release
+name: CI/CD Pipeline
 
 permissions:
   contents: write
@@ -13,8 +13,34 @@ on:
     branches: [main, master]
 
 jobs:
+  # Quick test job for all events
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build and test
+        run: npm run build
+        env:
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
+          NODE_ENV: production
+
+  # Full build matrix only for releases
   build:
+    needs: test
     runs-on: ${{ matrix.os }}
+    if: startsWith(github.ref, 'refs/tags/v')
     
     strategy:
       matrix:
@@ -39,9 +65,6 @@ jobs:
           REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
           REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
           NODE_ENV: production
-    
-      
-      # Only run packaging on release tags
       - name: Package applications (unsigned)
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
