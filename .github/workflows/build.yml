@@ -1,5 +1,9 @@
 name: Build and Release
 
+permissions:
+  contents: write
+  packages: write
+
 on:
   push:
     branches: [main, master]
@@ -32,9 +36,10 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          REACT_APP_SUPABASE_URL: https://xslphflkpeyfqcwwlrih.supabase.co
-          REACT_APP_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbHBoZmxrcGV5ZnFjd3dscmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNzkwNTgsImV4cCI6MjA2ODg1NTA1OH0.WICKm7rDZ899epi_0Nz7N435V2WEQI5sNxSzCoJ40EQ
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
           NODE_ENV: production
+    
       
       # Only run packaging on release tags
       - name: Package applications (unsigned)
@@ -50,8 +55,8 @@ jobs:
         shell: bash
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          REACT_APP_SUPABASE_URL: https://xslphflkpeyfqcwwlrih.supabase.co
-          REACT_APP_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzbHBoZmxrcGV5ZnFjd3dscmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNzkwNTgsImV4cCI6MjA2ODg1NTA1OH0.WICKm7rDZ899epi_0Nz7N435V2WEQI5sNxSzCoJ40EQ
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
           NODE_ENV: production
       
       - name: Upload build artifacts
@@ -59,7 +64,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: archivist-${{ matrix.os }}
-          path: dist/*
+          path: |
+            dist/*.dmg
+            dist/*.exe
+            dist/*.AppImage
+            dist/*.deb
+          if-no-files-found: error
 
   release:
     needs: build
