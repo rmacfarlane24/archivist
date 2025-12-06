@@ -41,7 +41,6 @@
     "json-storage",
     "archivist"
   ],
-  "author": "Ross MacFarlane",
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
