@@ -81,11 +81,11 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            npm run package:mac
+            npm run build && cross-env NODE_ENV=production electron-builder --mac --publish=never
           elif [ "$RUNNER_OS" == "Windows" ]; then
-            npm run package:win
+            npm run build && cross-env NODE_ENV=production electron-builder --win --publish=never
           else
-            npm run package:linux
+            npm run build && cross-env NODE_ENV=production electron-builder --linux --publish=never
           fi
         shell: bash
         env:
