@@ -2,6 +2,10 @@
   "name": "archivist",
   "version": "1.0.5",
   "description": "Electron desktop app for managing external hard drive metadata",
+  "author": {
+    "name": "Ross MacFarlane",
+    "email": "rmacfarlane24@googlemail.com"
+  },
   "main": "lib/main.js",
   "homepage": "https://rmacfarlane24.github.io/archivist",
   "repository": {
