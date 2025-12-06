@@ -81,11 +81,11 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
-            npm run build && cross-env NODE_ENV=production electron-builder --mac --publish=never
+            npm run package:mac
           elif [ "$RUNNER_OS" == "Windows" ]; then
-            npm run build && cross-env NODE_ENV=production electron-builder --win --publish=never
+            npm run package:win
           else
-            npm run build && cross-env NODE_ENV=production electron-builder --linux --publish=never
+            npm run package:linux
           fi
         shell: bash
         env:
@@ -93,6 +93,7 @@ jobs:
           REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
           REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
           NODE_ENV: production
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Upload build artifacts
         if: startsWith(github.ref, 'refs/tags/v')
