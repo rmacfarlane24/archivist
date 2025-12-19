@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { PlanSelection } from '../components/PlanSelection';
@@ -26,12 +26,120 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
+  
+  // Update checker state
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'no-update' | 'error'>('idle');
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [currentVersion, setCurrentVersion] = useState<string | null>(null);
 
   // NEW PAYMENT SYSTEM - Active
   const handlePlanSelected = async () => {
     // This is now handled in the PlanSelection component
     // Just close the modal
     setIsPlanModalOpen(false);
+  };
+
+  // Get current app version and check for latest version on component mount
+  useEffect(() => {
+    const initializeVersionInfo = async () => {
+      // Get current version
+      if (window.electronAPI?.getAppVersion) {
+        try {
+          const version = await window.electronAPI.getAppVersion();
+          setCurrentVersion(version);
+        } catch (error) {
+          console.error('Error getting app version:', error);
+        }
+      }
+      
+      // Auto-check for latest version
+      if (window.electronAPI?.updaterCheckForUpdates) {
+        try {
+          console.log('Fetching latest version from GitHub...');
+          const result = await window.electronAPI.updaterCheckForUpdates();
+          console.log('Update check result:', result);
+          
+          // Always set the latest version info
+          if (result.version) {
+            setUpdateInfo({ version: result.version });
+          }
+          
+          // Set status based on availability
+          if (result.available) {
+            setUpdateStatus('available');
+          } else {
+            setUpdateStatus('no-update');
+          }
+        } catch (error) {
+          console.error('Error checking for latest version:', error);
+          setUpdateStatus('error');
+        }
+      }
+    };
+    initializeVersionInfo();
+  }, []);
+
+  // Update checker handlers
+  const handleCheckForUpdates = async () => {
+    if (!window.electronAPI?.updaterCheckForUpdates) {
+      setUpdateStatus('error');
+      return;
+    }
+    
+    setUpdateStatus('checking');
+    try {
+      const result = await window.electronAPI.updaterCheckForUpdates();
+      if (result.available) {
+        setUpdateStatus('available');
+        setUpdateInfo({ version: result.version });
+      } else {
+        setUpdateStatus('no-update');
+      }
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+      setUpdateStatus('error');
+    }
+  };
+
+  const handleDownloadUpdate = async () => {
+    if (!window.electronAPI?.updaterDownloadUpdate) return;
+    
+    setUpdateStatus('downloading');
+    try {
+      const result = await window.electronAPI.updaterDownloadUpdate();
+      if (result.success) {
+        setUpdateStatus('ready');
+      } else {
+        console.error('Download failed:', result.error || result.message);
+        // In development mode, redirect to GitHub
+        if (result.message?.includes('development')) {
+          if (updateInfo?.version && window.electronAPI?.openExternal) {
+            const downloadUrl = `https://github.com/rmacfarlane24/archivist/releases/tag/v${updateInfo.version}`;
+            await window.electronAPI.openExternal(downloadUrl);
+          }
+        }
+        setUpdateStatus('error');
+      }
+    } catch (error) {
+      console.error('Error downloading update:', error);
+      setUpdateStatus('error');
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    if (!window.electronAPI?.updaterInstallUpdate) return;
+    
+    try {
+      const result = await window.electronAPI.updaterInstallUpdate();
+      if (!result.success) {
+        console.error('Install failed:', result.error || result.message);
+        setUpdateStatus('error');
+      }
+      // If successful, the app will quit and restart - no need to update status
+    } catch (error) {
+      console.error('Error installing update:', error);
+      setUpdateStatus('error');
+    }
   };
 
   // Customer Portal - Manage Billing
@@ -258,6 +366,118 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
                       </span>
                     </label>
                   ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* App Updates Section */}
+          <div className={`p-6 rounded-lg shadow-sm ${darkMode ? 'bg-custom-black' : 'bg-custom-white'}`}>
+            <h2 className="text-lg font-medium mb-4">App Updates</h2>
+            
+            {/* Version Information */}
+            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex justify-between items-center text-sm">
+                <div>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">Current Version:</span>
+                  <span className="ml-2 text-gray-900 dark:text-gray-100">{currentVersion || 'Loading...'}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">Latest Version:</span>
+                  <span className="ml-2 text-gray-900 dark:text-gray-100">{updateInfo?.version || 'Checking...'}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">
+                    {updateStatus === 'checking' && 'Checking for updates...'}
+                    {updateStatus === 'available' && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-600">Update available: v{updateInfo?.version}</span>
+                      </div>
+                    )}
+                    {updateStatus === 'downloading' && 'Downloading update...'}
+                    {updateStatus === 'ready' && 'Update ready to install'}
+                    {updateStatus === 'no-update' && 'You have the latest version'}
+                    {updateStatus === 'error' && 'Error checking for updates'}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {updateStatus === 'idle' && (
+                    <button
+                      onClick={handleCheckForUpdates}
+                      className={`px-4 py-2 text-sm rounded font-medium ${
+                        darkMode 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                    >
+                      Check for Updates
+                    </button>
+                  )}
+                  
+                  {updateStatus === 'available' && (
+                    <button
+                      onClick={handleDownloadUpdate}
+                      className={`px-4 py-2 text-sm rounded font-medium ${
+                        darkMode 
+                          ? 'bg-green-600 hover:bg-green-700 text-white' 
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      Update Now
+                    </button>
+                  )}
+                  
+                  {updateStatus === 'downloading' && (
+                    <button
+                      disabled
+                      className="px-4 py-2 text-sm rounded font-medium bg-gray-400 text-white cursor-not-allowed"
+                    >
+                      Downloading...
+                    </button>
+                  )}
+                  
+                  {updateStatus === 'ready' && (
+                    <button
+                      onClick={handleInstallUpdate}
+                      className={`px-4 py-2 text-sm rounded font-medium ${
+                        darkMode 
+                          ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                          : 'bg-orange-600 hover:bg-orange-700 text-white'
+                      }`}
+                    >
+                      Install & Restart
+                    </button>
+                  )}
+                  
+                  {(updateStatus === 'no-update' || updateStatus === 'error') && (
+                    <button
+                      onClick={handleCheckForUpdates}
+                      className={`px-4 py-2 text-sm rounded font-medium ${
+                        darkMode 
+                          ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+                          : 'bg-gray-600 hover:bg-gray-700 text-white'
+                      }`}
+                    >
+                      Check Again
+                    </button>
+                  )}
+                  
+                  {updateStatus === 'checking' && (
+                    <div className="flex items-center px-4 py-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                    </div>
+                  )}
+                  
+                  {updateStatus === 'downloading' && (
+                    <div className="flex items-center px-4 py-2">
+                      <div className="animate-pulse text-sm">Downloading...</div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

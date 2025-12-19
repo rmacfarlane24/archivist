@@ -3472,10 +3472,63 @@ ipcMain.handle('admin-backup-user-data', async (event, userId: string) => {
 ipcMain.handle('updater-check-for-updates', async () => {
   try {
     if (process.env.NODE_ENV === 'development') {
-      return { available: false, message: 'Updates disabled in development' };
+      // In development, fetch latest version from GitHub API
+      try {
+        console.log('Fetching from GitHub API...');
+        const https = require('https');
+        
+        const options = {
+          hostname: 'api.github.com',
+          path: '/repos/rmacfarlane24/archivist/releases/latest',
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Archivist-App'
+          }
+        };
+        
+        const response = await new Promise<any>((resolve, reject) => {
+          const req = https.request(options, (res: any) => {
+            let data = '';
+            res.on('data', (chunk: any) => data += chunk);
+            res.on('end', () => {
+              try {
+                resolve(JSON.parse(data));
+              } catch (e) {
+                reject(e);
+              }
+            });
+          });
+          req.on('error', reject);
+          req.end();
+        });
+        
+        console.log('GitHub API response:', response);
+        const latestVersion = response.tag_name?.replace('v', '') || response.name?.replace('v', '') || '1.0.5';
+        const currentVersion = app.getVersion();
+        console.log('Latest version:', latestVersion, 'Current version:', currentVersion);
+        
+        // Check if update is available
+        const updateAvailable = latestVersion !== currentVersion;
+        
+        return { 
+          available: updateAvailable,
+          version: latestVersion,
+          message: process.env.NODE_ENV === 'development' ? 'Updates disabled in development' : undefined,
+          currentVersion 
+        };
+      } catch (fetchError) {
+        console.error('Error fetching latest version:', fetchError);
+        return { available: false, message: 'Error checking for updates', version: app.getVersion() };
+      }
     }
     const result = await autoUpdater.checkForUpdates();
-    return { available: result !== null, version: result?.updateInfo?.version };
+    const currentVersion = app.getVersion();
+    const latestVersion = result?.updateInfo?.version || currentVersion;
+    return { 
+      available: result !== null && latestVersion !== currentVersion, 
+      version: latestVersion,
+      currentVersion 
+    };
   } catch (error) {
     console.error('Error checking for updates:', error);
     return { available: false, error: error instanceof Error ? error.message : String(error) };
@@ -3485,9 +3538,12 @@ ipcMain.handle('updater-check-for-updates', async () => {
 ipcMain.handle('updater-download-update', async () => {
   try {
     if (process.env.NODE_ENV === 'development') {
-      return { success: false, message: 'Updates disabled in development' };
+      return { success: false, message: 'Updates disabled in development mode. Please download from GitHub releases.' };
     }
+    
+    console.log('Starting update download...');
     await autoUpdater.downloadUpdate();
+    console.log('Update download completed');
     return { success: true };
   } catch (error) {
     console.error('Error downloading update:', error);
@@ -3498,14 +3554,25 @@ ipcMain.handle('updater-download-update', async () => {
 ipcMain.handle('updater-install-update', async () => {
   try {
     if (process.env.NODE_ENV === 'development') {
-      return { success: false, message: 'Updates disabled in development' };
+      return { success: false, message: 'Updates disabled in development mode' };
     }
+    
+    console.log('Installing update and restarting...');
     autoUpdater.quitAndInstall();
     return { success: true };
   } catch (error) {
     console.error('Error installing update:', error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
+});
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('open-external', (event, url: string) => {
+  const { shell } = require('electron');
+  return shell.openExternal(url);
 });
 
 // Protocol registration removed - using simple web confirmation instead
