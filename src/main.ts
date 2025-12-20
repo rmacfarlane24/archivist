@@ -3525,6 +3525,8 @@ ipcMain.handle('updater-check-for-updates', async () => {
           const latestVersion = result.updateInfo.version;
           const updateAvailable = latestVersion !== currentVersion;
           
+          console.log(`Version comparison - Current: ${currentVersion}, Latest: ${latestVersion}, Update available: ${updateAvailable}`);
+          
           return { 
             available: updateAvailable,
             version: latestVersion,
@@ -3532,6 +3534,7 @@ ipcMain.handle('updater-check-for-updates', async () => {
             updateInfo: result.updateInfo
           };
         } else {
+          console.log('No update info returned from electron-updater');
           return { 
             available: false,
             version: app.getVersion(),
@@ -3737,13 +3740,7 @@ function configureAutoUpdater() {
   autoUpdater.allowDowngrade = false;
   autoUpdater.autoInstallOnAppQuit = false;
   
-  // Set update feed URL for GitHub releases
-  autoUpdater.setFeedURL({
-    provider: 'github',
-    owner: 'rmacfarlane24',
-    repo: 'archivist',
-    private: false
-  });
+  // Note: setFeedURL not needed for GitHub releases - electron-updater auto-detects from package.json
   // Manual update checking (don't call checkForUpdatesAndNotify automatically)
 
   // Auto-updater event handlers
