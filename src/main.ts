@@ -3557,14 +3557,68 @@ ipcMain.handle('updater-check-for-updates', async () => {
 
 ipcMain.handle('updater-download-update', async () => {
   try {
-    if (process.env.NODE_ENV === 'development') {
-      return { success: false, message: 'Updates disabled in development mode. Please download from GitHub releases.' };
+    console.log('Starting update download...');
+    
+    // For packaged apps, try to use electron-updater first
+    if (app.isPackaged) {
+      try {
+        // First check for updates to ensure electron-updater knows about them
+        console.log('Checking for updates before download...');
+        const checkResult = await autoUpdater.checkForUpdates();
+        
+        if (checkResult) {
+          console.log('Update found via electron-updater, downloading...');
+          await autoUpdater.downloadUpdate();
+          console.log('Update download completed via electron-updater');
+          return { success: true };
+        } else {
+          console.log('No update found via electron-updater, falling back to manual redirect');
+        }
+      } catch (updaterError) {
+        console.error('Electron-updater download failed:', updaterError);
+        console.log('Falling back to manual download redirect');
+      }
     }
     
-    console.log('Starting update download...');
-    await autoUpdater.downloadUpdate();
-    console.log('Update download completed');
-    return { success: true };
+    // Fallback: redirect to GitHub releases for manual download
+    console.log('Redirecting to GitHub releases for manual download...');
+    
+    // Get the latest version from GitHub
+    const https = require('https');
+    const options = {
+      hostname: 'api.github.com',
+      path: '/repos/rmacfarlane24/archivist/releases/latest',
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Archivist-App'
+      }
+    };
+    
+    const response = await new Promise<any>((resolve, reject) => {
+      const req = https.request(options, (res: any) => {
+        let data = '';
+        res.on('data', (chunk: any) => data += chunk);
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+      req.on('error', reject);
+      req.end();
+    });
+    
+    const latestVersion = response.tag_name || `v${app.getVersion()}`;
+    
+    return { 
+      success: false, 
+      message: 'Manual download required',
+      redirectUrl: `https://github.com/rmacfarlane24/archivist/releases/tag/${latestVersion}`,
+      version: latestVersion.replace('v', '')
+    };
+    
   } catch (error) {
     console.error('Error downloading update:', error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };

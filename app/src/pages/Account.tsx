@@ -115,14 +115,22 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
         setUpdateStatus('ready');
       } else {
         console.error('Download failed:', result.error || result.message);
-        // In development mode, redirect to GitHub
-        if (result.message?.includes('development')) {
+        
+        // Handle manual download redirect
+        if (result.redirectUrl && window.electronAPI?.openExternal) {
+          console.log('Redirecting to GitHub releases for manual download');
+          await window.electronAPI.openExternal(result.redirectUrl);
+          setUpdateStatus('no-update'); // Reset to allow checking again
+        } else if (result.message?.includes('development') || result.message?.includes('Manual download')) {
+          // Fallback redirect for development or manual download
           if (updateInfo?.version && window.electronAPI?.openExternal) {
             const downloadUrl = `https://github.com/rmacfarlane24/archivist/releases/tag/v${updateInfo.version}`;
             await window.electronAPI.openExternal(downloadUrl);
           }
+          setUpdateStatus('no-update'); // Reset to allow checking again
+        } else {
+          setUpdateStatus('error');
         }
-        setUpdateStatus('error');
       }
     } catch (error) {
       console.error('Error downloading update:', error);
