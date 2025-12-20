@@ -55,6 +55,9 @@ function loadEnvironmentFile() {
 
 loadEnvironmentFile();
 
+// Enable unsigned auto-updates
+process.env.ELECTRON_UPDATER_ALLOW_UNSIGNED = 'true';
+
 // Ensure critical environment variables are set for packaged apps
 if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_SUPABASE_URL) {
   // Fallback values for packaged apps
@@ -3473,18 +3476,14 @@ ipcMain.handle('updater-check-for-updates', async () => {
   try {
     console.log('Checking for updates... NODE_ENV:', process.env.NODE_ENV, 'isDev:', !app.isPackaged);
     
-    // Always use GitHub API for consistency (both dev and prod)
-    try {
-      console.log('Fetching latest version from GitHub API...');
+    if (process.env.NODE_ENV === 'development') {
+      // In development, use GitHub API
       const https = require('https');
-      
       const options = {
         hostname: 'api.github.com',
         path: '/repos/rmacfarlane24/archivist/releases/latest',
         method: 'GET',
-        headers: {
-          'User-Agent': 'Archivist-App'
-        }
+        headers: { 'User-Agent': 'Archivist-App' }
       };
       
       const response = await new Promise<any>((resolve, reject) => {
@@ -3503,16 +3502,8 @@ ipcMain.handle('updater-check-for-updates', async () => {
         req.end();
       });
       
-      console.log('GitHub API response tag:', response.tag_name);
-      const latestVersion = response.tag_name?.replace('v', '') || response.name?.replace('v', '');
+      const latestVersion = response.tag_name?.replace('v', '') || app.getVersion();
       const currentVersion = app.getVersion();
-      console.log('Version comparison - Latest:', latestVersion, 'Current:', currentVersion);
-      
-      if (!latestVersion) {
-        throw new Error('Could not determine latest version from GitHub API');
-      }
-      
-      // Check if update is available using semver comparison
       const updateAvailable = latestVersion !== currentVersion;
       
       return { 
@@ -3521,34 +3512,41 @@ ipcMain.handle('updater-check-for-updates', async () => {
         currentVersion,
         message: updateAvailable ? undefined : 'You have the latest version'
       };
-    } catch (fetchError) {
-      console.error('Error fetching latest version from GitHub:', fetchError);
-      
-      // Fallback to electron-updater for packaged apps only
-      if (app.isPackaged) {
-        try {
-          console.log('Falling back to electron-updater...');
-          const result = await autoUpdater.checkForUpdates();
-          const currentVersion = app.getVersion();
-          const latestVersion = result?.updateInfo?.version || currentVersion;
-          return { 
-            available: result !== null && latestVersion !== currentVersion, 
-            version: latestVersion,
-            currentVersion 
-          };
-        } catch (updaterError) {
-          console.error('Electron-updater also failed:', updaterError);
-        }
-      }
-      
-      // Final fallback - return current version
-      return { 
-        available: false, 
-        message: 'Error checking for updates', 
-        version: app.getVersion(),
-        currentVersion: app.getVersion()
-      };
     }
+    
+    // For packaged apps, use electron-updater
+    if (app.isPackaged) {
+      try {
+        console.log('Using electron-updater for packaged app...');
+        const result = await autoUpdater.checkForUpdates();
+        
+        if (result && result.updateInfo) {
+          const currentVersion = app.getVersion();
+          const latestVersion = result.updateInfo.version;
+          const updateAvailable = latestVersion !== currentVersion;
+          
+          return { 
+            available: updateAvailable,
+            version: latestVersion,
+            currentVersion,
+            updateInfo: result.updateInfo
+          };
+        } else {
+          return { 
+            available: false,
+            version: app.getVersion(),
+            currentVersion: app.getVersion(),
+            message: 'No updates available'
+          };
+        }
+      } catch (error) {
+        console.error('Electron-updater check failed:', error);
+        throw error;
+      }
+    }
+    
+    throw new Error('Update check not available in this environment');
+    
   } catch (error) {
     console.error('Error checking for updates:', error);
     return { available: false, error: error instanceof Error ? error.message : String(error) };
@@ -3559,65 +3557,114 @@ ipcMain.handle('updater-download-update', async () => {
   try {
     console.log('Starting update download...');
     
-    // For packaged apps, try to use electron-updater first
+    if (process.env.NODE_ENV === 'development') {
+      // In development, redirect to GitHub releases
+      const https = require('https');
+      const options = {
+        hostname: 'api.github.com',
+        path: '/repos/rmacfarlane24/archivist/releases/latest',
+        method: 'GET',
+        headers: { 'User-Agent': 'Archivist-App' }
+      };
+      
+      const response = await new Promise<any>((resolve, reject) => {
+        const req = https.request(options, (res: any) => {
+          let data = '';
+          res.on('data', (chunk: any) => data += chunk);
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(data));
+            } catch (e) {
+              reject(e);
+            }
+          });
+        });
+        req.on('error', reject);
+        req.end();
+      });
+      
+      const latestVersion = response.tag_name || `v${app.getVersion()}`;
+      
+      return { 
+        success: false, 
+        message: 'Manual download required in development',
+        redirectUrl: `https://github.com/rmacfarlane24/archivist/releases/tag/${latestVersion}`,
+        version: latestVersion.replace('v', '')
+      };
+    }
+    
+    // For packaged apps, use electron-updater
     if (app.isPackaged) {
       try {
-        // First check for updates to ensure electron-updater knows about them
-        console.log('Checking for updates before download...');
-        const checkResult = await autoUpdater.checkForUpdates();
+        console.log('Downloading update via electron-updater...');
         
-        if (checkResult) {
-          console.log('Update found via electron-updater, downloading...');
-          await autoUpdater.downloadUpdate();
-          console.log('Update download completed via electron-updater');
-          return { success: true };
-        } else {
-          console.log('No update found via electron-updater, falling back to manual redirect');
-        }
-      } catch (updaterError) {
-        console.error('Electron-updater download failed:', updaterError);
-        console.log('Falling back to manual download redirect');
+        // Set up download promise
+        const downloadPromise = new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Download timeout'));
+          }, 300000); // 5 minute timeout
+          
+          autoUpdater.once('update-downloaded', () => {
+            clearTimeout(timeout);
+            resolve(true);
+          });
+          
+          autoUpdater.once('error', (error) => {
+            clearTimeout(timeout);
+            reject(error);
+          });
+        });
+        
+        // Start the download
+        await autoUpdater.downloadUpdate();
+        
+        // Wait for download to complete
+        await downloadPromise;
+        
+        console.log('Update download completed successfully');
+        return { success: true };
+        
+      } catch (error) {
+        console.error('Electron-updater download failed:', error);
+        
+        // Fallback to manual download
+        const https = require('https');
+        const options = {
+          hostname: 'api.github.com',
+          path: '/repos/rmacfarlane24/archivist/releases/latest',
+          method: 'GET',
+          headers: { 'User-Agent': 'Archivist-App' }
+        };
+        
+        const response = await new Promise<any>((resolve, reject) => {
+          const req = https.request(options, (res: any) => {
+            let data = '';
+            res.on('data', (chunk: any) => data += chunk);
+            res.on('end', () => {
+              try {
+                resolve(JSON.parse(data));
+              } catch (e) {
+                reject(e);
+              }
+            });
+          });
+          req.on('error', reject);
+          req.end();
+        });
+        
+        const latestVersion = response.tag_name || `v${app.getVersion()}`;
+        
+        return { 
+          success: false, 
+          message: 'Auto-update failed, manual download required',
+          redirectUrl: `https://github.com/rmacfarlane24/archivist/releases/tag/${latestVersion}`,
+          version: latestVersion.replace('v', ''),
+          error: error instanceof Error ? error.message : String(error)
+        };
       }
     }
     
-    // Fallback: redirect to GitHub releases for manual download
-    console.log('Redirecting to GitHub releases for manual download...');
-    
-    // Get the latest version from GitHub
-    const https = require('https');
-    const options = {
-      hostname: 'api.github.com',
-      path: '/repos/rmacfarlane24/archivist/releases/latest',
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Archivist-App'
-      }
-    };
-    
-    const response = await new Promise<any>((resolve, reject) => {
-      const req = https.request(options, (res: any) => {
-        let data = '';
-        res.on('data', (chunk: any) => data += chunk);
-        res.on('end', () => {
-          try {
-            resolve(JSON.parse(data));
-          } catch (e) {
-            reject(e);
-          }
-        });
-      });
-      req.on('error', reject);
-      req.end();
-    });
-    
-    const latestVersion = response.tag_name || `v${app.getVersion()}`;
-    
-    return { 
-      success: false, 
-      message: 'Manual download required',
-      redirectUrl: `https://github.com/rmacfarlane24/archivist/releases/tag/${latestVersion}`,
-      version: latestVersion.replace('v', '')
-    };
+    return { success: false, message: 'Updates not available in this environment' };
     
   } catch (error) {
     console.error('Error downloading update:', error);
@@ -3686,6 +3733,17 @@ function configureAutoUpdater() {
   // Configure auto-updater
   autoUpdater.logger = console;
   autoUpdater.autoDownload = false; // Don't auto-download, let user decide
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.allowDowngrade = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  
+  // Set update feed URL for GitHub releases
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'rmacfarlane24',
+    repo: 'archivist',
+    private: false
+  });
   // Manual update checking (don't call checkForUpdatesAndNotify automatically)
 
   // Auto-updater event handlers
