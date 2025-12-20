@@ -3471,64 +3471,84 @@ ipcMain.handle('admin-backup-user-data', async (event, userId: string) => {
 // Auto-updater IPC handlers
 ipcMain.handle('updater-check-for-updates', async () => {
   try {
-    if (process.env.NODE_ENV === 'development') {
-      // In development, fetch latest version from GitHub API
-      try {
-        console.log('Fetching from GitHub API...');
-        const https = require('https');
-        
-        const options = {
-          hostname: 'api.github.com',
-          path: '/repos/rmacfarlane24/archivist/releases/latest',
-          method: 'GET',
-          headers: {
-            'User-Agent': 'Archivist-App'
-          }
-        };
-        
-        const response = await new Promise<any>((resolve, reject) => {
-          const req = https.request(options, (res: any) => {
-            let data = '';
-            res.on('data', (chunk: any) => data += chunk);
-            res.on('end', () => {
-              try {
-                resolve(JSON.parse(data));
-              } catch (e) {
-                reject(e);
-              }
-            });
+    console.log('Checking for updates... NODE_ENV:', process.env.NODE_ENV, 'isDev:', !app.isPackaged);
+    
+    // Always use GitHub API for consistency (both dev and prod)
+    try {
+      console.log('Fetching latest version from GitHub API...');
+      const https = require('https');
+      
+      const options = {
+        hostname: 'api.github.com',
+        path: '/repos/rmacfarlane24/archivist/releases/latest',
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Archivist-App'
+        }
+      };
+      
+      const response = await new Promise<any>((resolve, reject) => {
+        const req = https.request(options, (res: any) => {
+          let data = '';
+          res.on('data', (chunk: any) => data += chunk);
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(data));
+            } catch (e) {
+              reject(e);
+            }
           });
-          req.on('error', reject);
-          req.end();
         });
-        
-        console.log('GitHub API response:', response);
-        const latestVersion = response.tag_name?.replace('v', '') || response.name?.replace('v', '') || '1.0.5';
-        const currentVersion = app.getVersion();
-        console.log('Latest version:', latestVersion, 'Current version:', currentVersion);
-        
-        // Check if update is available
-        const updateAvailable = latestVersion !== currentVersion;
-        
-        return { 
-          available: updateAvailable,
-          version: latestVersion,
-          message: process.env.NODE_ENV === 'development' ? 'Updates disabled in development' : undefined,
-          currentVersion 
-        };
-      } catch (fetchError) {
-        console.error('Error fetching latest version:', fetchError);
-        return { available: false, message: 'Error checking for updates', version: app.getVersion() };
+        req.on('error', reject);
+        req.end();
+      });
+      
+      console.log('GitHub API response tag:', response.tag_name);
+      const latestVersion = response.tag_name?.replace('v', '') || response.name?.replace('v', '');
+      const currentVersion = app.getVersion();
+      console.log('Version comparison - Latest:', latestVersion, 'Current:', currentVersion);
+      
+      if (!latestVersion) {
+        throw new Error('Could not determine latest version from GitHub API');
       }
+      
+      // Check if update is available using semver comparison
+      const updateAvailable = latestVersion !== currentVersion;
+      
+      return { 
+        available: updateAvailable,
+        version: latestVersion,
+        currentVersion,
+        message: updateAvailable ? undefined : 'You have the latest version'
+      };
+    } catch (fetchError) {
+      console.error('Error fetching latest version from GitHub:', fetchError);
+      
+      // Fallback to electron-updater for packaged apps only
+      if (app.isPackaged) {
+        try {
+          console.log('Falling back to electron-updater...');
+          const result = await autoUpdater.checkForUpdates();
+          const currentVersion = app.getVersion();
+          const latestVersion = result?.updateInfo?.version || currentVersion;
+          return { 
+            available: result !== null && latestVersion !== currentVersion, 
+            version: latestVersion,
+            currentVersion 
+          };
+        } catch (updaterError) {
+          console.error('Electron-updater also failed:', updaterError);
+        }
+      }
+      
+      // Final fallback - return current version
+      return { 
+        available: false, 
+        message: 'Error checking for updates', 
+        version: app.getVersion(),
+        currentVersion: app.getVersion()
+      };
     }
-    const result = await autoUpdater.checkForUpdates();
-    const currentVersion = app.getVersion();
-    const latestVersion = result?.updateInfo?.version || currentVersion;
-    return { 
-      available: result !== null && latestVersion !== currentVersion, 
-      version: latestVersion,
-      currentVersion 
-    };
   } catch (error) {
     console.error('Error checking for updates:', error);
     return { available: false, error: error instanceof Error ? error.message : String(error) };

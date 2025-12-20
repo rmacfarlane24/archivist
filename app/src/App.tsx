@@ -4323,10 +4323,10 @@ const SelectedDriveInfo: React.FC<{
   
   return (
     <>
-      <div className="flex items-center flex-1 min-w-0">
-        <div className="flex items-center gap-4 lg:gap-3 xl:gap-4 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 pr-2">
+      <div className="flex items-center flex-1 min-w-0 relative">
+        <div className="flex items-center gap-3 lg:gap-2 xl:gap-3 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-500 pb-2 -mb-2 w-full">
           {/* Used/Capacity Container */}
-          <div className="flex flex-col items-center text-center min-w-24 lg:min-w-20 xl:min-w-24 p-1 flex-shrink-0">
+          <div className="flex flex-col items-center text-center min-w-20 lg:min-w-18 xl:min-w-20 p-1 flex-shrink-0">
             <div className="text-sm lg:text-xs xl:text-sm font-semibold w-full overflow-hidden text-ellipsis whitespace-nowrap">
               {selectedDriveInfo
                 ? (selectedDriveInfo.usedSpace === 0 && selectedDriveInfo.totalCapacity === 0
@@ -4338,7 +4338,7 @@ const SelectedDriveInfo: React.FC<{
           </div>
           
           {/* Free Space Container */}
-          <div className="flex flex-col items-center text-center min-w-24 lg:min-w-20 xl:min-w-24 p-1 flex-shrink-0">
+          <div className="flex flex-col items-center text-center min-w-20 lg:min-w-18 xl:min-w-20 p-1 flex-shrink-0">
             <div className="text-sm lg:text-xs xl:text-sm font-semibold w-full overflow-hidden text-ellipsis whitespace-nowrap">
               {selectedDriveInfo
                 ? (selectedDriveInfo.freeSpace === 0
@@ -4350,7 +4350,7 @@ const SelectedDriveInfo: React.FC<{
           </div>
           
           {/* Date Added Container */}
-          <div className="flex flex-col items-center text-center min-w-24 lg:min-w-20 xl:min-w-24 p-1 flex-shrink-0">
+          <div className="flex flex-col items-center text-center min-w-20 lg:min-w-18 xl:min-w-20 p-1 flex-shrink-0">
             <div className="text-sm lg:text-xs xl:text-sm font-semibold w-full overflow-hidden text-ellipsis whitespace-nowrap">
               {selectedDriveInfo?.addedDate ? addedDateFormatted : '—'}
             </div>
@@ -4358,7 +4358,7 @@ const SelectedDriveInfo: React.FC<{
           </div>
           
           {/* Last Updated Container */}
-          <div className="flex flex-col items-center text-center min-w-24 lg:min-w-20 xl:min-w-24 p-1 flex-shrink-0">
+          <div className="flex flex-col items-center text-center min-w-20 lg:min-w-18 xl:min-w-20 p-1 flex-shrink-0">
             <div className="text-sm lg:text-xs xl:text-sm font-semibold w-full overflow-hidden text-ellipsis whitespace-nowrap">
               {selectedDriveInfo?.lastUpdated && lastUpdatedFormatted ? lastUpdatedFormatted : '—'}
             </div>
@@ -4366,7 +4366,7 @@ const SelectedDriveInfo: React.FC<{
           </div>
           
           {/* Format Container */}
-          <div className="flex flex-col items-center text-center min-w-24 lg:min-w-20 xl:min-w-24 p-1 flex-shrink-0">
+          <div className="flex flex-col items-center text-center min-w-16 lg:min-w-14 xl:min-w-16 p-1 flex-shrink-0">
             <div className="text-sm lg:text-xs xl:text-sm font-semibold w-full overflow-hidden text-ellipsis whitespace-nowrap">
               {selectedDriveInfo?.formatType || '—'}
             </div>
@@ -4375,7 +4375,7 @@ const SelectedDriveInfo: React.FC<{
           
           {/* Loading Container */}
           {isProgressiveRendering && (
-            <div className="flex flex-col items-center text-center min-w-24 lg:min-w-20 xl:min-w-24 p-1 flex-shrink-0">
+            <div className="flex flex-col items-center text-center min-w-20 lg:min-w-18 xl:min-w-20 p-1 flex-shrink-0">
               <div className="flex items-center space-x-1">
                 <div className="animate-spin rounded-full h-3 w-3 lg:h-2 lg:w-2 xl:h-3 xl:w-3 border-b-2 border-green-600"></div>
                 <div className="text-sm lg:text-xs xl:text-sm font-semibold text-green-600">

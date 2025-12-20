@@ -54,6 +54,7 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
       
       // Auto-check for latest version
       if (window.electronAPI?.updaterCheckForUpdates) {
+        setUpdateStatus('checking'); // Set checking state
         try {
           console.log('Fetching latest version from GitHub...');
           const result = await window.electronAPI.updaterCheckForUpdates();
@@ -74,6 +75,9 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
           console.error('Error checking for latest version:', error);
           setUpdateStatus('error');
         }
+      } else {
+        // No update API available
+        setUpdateStatus('error');
       }
     };
     initializeVersionInfo();
