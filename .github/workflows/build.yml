@@ -3,6 +3,7 @@ name: CI/CD Pipeline
 permissions:
   contents: write
   packages: write
+  actions: read
 
 on:
   push:
@@ -87,5 +88,6 @@ jobs:
           REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
           NODE_ENV: production
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       # Note: electron-builder with --publish=always will handle GitHub releases automatically
