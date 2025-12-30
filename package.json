@@ -1,6 +1,6 @@
 {
   "name": "archivist",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Electron desktop app for managing external hard drive metadata",
   "author": {
     "name": "Ross MacFarlane",
