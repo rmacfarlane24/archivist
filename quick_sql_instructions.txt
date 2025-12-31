@@ -1,0 +1,13 @@
+📋 EASY COPY-PASTE METHOD:
+
+1. Click this link to open your Supabase SQL Editor:
+   https://supabase.com/dashboard/project/xslphflkpeyfqcwwlrih/sql/new
+
+2. Copy ALL the SQL from this file:
+   /Users/rossmacfarlane/apps/archivist/supabase/migrations/20241229000001_fix_function_security.sql
+
+3. Paste it and click 'Run'
+
+4. Look for 'Success. No rows returned' message
+
+That's it! All the critical security fixes will be applied.

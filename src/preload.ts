@@ -156,7 +156,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Auto-updater functions
   updaterCheckForUpdates: () => ipcRenderer.invoke('updater-check-for-updates'),
   updaterDownloadUpdate: () => ipcRenderer.invoke('updater-download-update'),
-  updaterInstallUpdate: () => ipcRenderer.invoke('updater-install-update'),
+  openDownloadedFile: (filePath: string) => ipcRenderer.invoke('open-downloaded-file', filePath),
+  showFileInFolder: (filePath: string) => ipcRenderer.invoke('show-file-in-folder', filePath),
+  getPlatformInfo: () => ipcRenderer.invoke('get-platform-info'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
 }); 

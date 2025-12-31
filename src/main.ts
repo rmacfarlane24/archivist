@@ -3595,75 +3595,82 @@ ipcMain.handle('updater-download-update', async () => {
         version: latestVersion.replace('v', '')
       };
     }
+
+    // Get platform-specific download info
+    const platform = process.platform;
+    const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
     
-    // For packaged apps, use electron-updater
+    // First, get the latest version info
+    const result = await autoUpdater.checkForUpdates();
+    if (!result?.updateInfo) {
+      return { success: false, message: 'No update information available' };
+    }
+    
+    const version = result.updateInfo.version;
+    const baseUrl = `https://github.com/rmacfarlane24/archivist/releases/download/v${version}`;
+    
+    // Platform-specific file names and URLs
+    let fileName: string;
+    let downloadUrl: string;
+    
+    switch (platform) {
+      case 'darwin':
+        fileName = arch === 'arm64' ? `Archivist-${version}-arm64.dmg` : `Archivist-${version}.dmg`;
+        downloadUrl = `${baseUrl}/${fileName}`;
+        break;
+      case 'win32':
+        fileName = `Archivist Setup ${version}.exe`;
+        downloadUrl = `${baseUrl}/${fileName}`;
+        break;
+      case 'linux':
+        fileName = `Archivist-${version}.AppImage`;
+        downloadUrl = `${baseUrl}/${fileName}`;
+        break;
+      default:
+        return { success: false, message: `Unsupported platform: ${platform}` };
+    }
+    
+    console.log(`Downloading ${fileName} for ${platform} ${arch}...`);
+    console.log(`Download URL: ${downloadUrl}`);
+    
+    // For packaged apps, download the file manually
     if (app.isPackaged) {
       try {
-        console.log('Downloading update via electron-updater...');
-        
-        // Set up download promise
-        const downloadPromise = new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Download timeout'));
-          }, 300000); // 5 minute timeout
-          
-          autoUpdater.once('update-downloaded', () => {
-            clearTimeout(timeout);
-            resolve(true);
-          });
-          
-          autoUpdater.once('error', (error) => {
-            clearTimeout(timeout);
-            reject(error);
-          });
-        });
-        
-        // Start the download
-        await autoUpdater.downloadUpdate();
-        
-        // Wait for download to complete
-        await downloadPromise;
-        
-        console.log('Update download completed successfully');
-        return { success: true };
-        
-      } catch (error) {
-        console.error('Electron-updater download failed:', error);
-        
-        // Fallback to manual download
         const https = require('https');
-        const options = {
-          hostname: 'api.github.com',
-          path: '/repos/rmacfarlane24/archivist/releases/latest',
-          method: 'GET',
-          headers: { 'User-Agent': 'Archivist-App' }
-        };
+        const fs = require('fs');
+        const path = require('path');
+        const os = require('os');
         
-        const response = await new Promise<any>((resolve, reject) => {
-          const req = https.request(options, (res: any) => {
-            let data = '';
-            res.on('data', (chunk: any) => data += chunk);
-            res.on('end', () => {
-              try {
-                resolve(JSON.parse(data));
-              } catch (e) {
-                reject(e);
-              }
+        const downloadPath = path.join(os.homedir(), 'Downloads', fileName);
+        
+        return new Promise<{ success: boolean; error?: string; message?: string; filePath?: string }>((resolve) => {
+          const file = fs.createWriteStream(downloadPath);
+          
+          https.get(downloadUrl, (response: any) => {
+            if (response.statusCode !== 200) {
+              resolve({ success: false, error: `Download failed with status ${response.statusCode}` });
+              return;
+            }
+            
+            response.pipe(file);
+            
+            file.on('finish', () => {
+              file.close();
+              console.log(`Update downloaded to: ${downloadPath}`);
+              resolve({ success: true, filePath: downloadPath });
             });
+            
+            file.on('error', (error: any) => {
+              fs.unlink(downloadPath, () => {}); // Delete the file on error
+              resolve({ success: false, error: error.message });
+            });
+          }).on('error', (error: any) => {
+            resolve({ success: false, error: error.message });
           });
-          req.on('error', reject);
-          req.end();
         });
-        
-        const latestVersion = response.tag_name || `v${app.getVersion()}`;
-        
-        return { 
-          success: false, 
-          message: 'Auto-update failed, manual download required',
-          redirectUrl: `https://github.com/rmacfarlane24/archivist/releases/tag/${latestVersion}`,
-          version: latestVersion.replace('v', ''),
-          error: error instanceof Error ? error.message : String(error)
-        };
+      } catch (error) {
+        console.error('Manual download failed:', error);
+        throw error;
       }
     }
     
@@ -3675,19 +3682,36 @@ ipcMain.handle('updater-download-update', async () => {
   }
 });
 
-ipcMain.handle('updater-install-update', async () => {
+// Open downloaded file (DMG, EXE, etc.)
+ipcMain.handle('open-downloaded-file', async (_, filePath: string) => {
   try {
-    if (process.env.NODE_ENV === 'development') {
-      return { success: false, message: 'Updates disabled in development mode' };
-    }
-    
-    console.log('Installing update and restarting...');
-    autoUpdater.quitAndInstall();
+    const { shell } = require('electron');
+    await shell.openPath(filePath);
     return { success: true };
   } catch (error) {
-    console.error('Error installing update:', error);
+    console.error('Error opening file:', error);
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
+});
+
+// Show file in folder
+ipcMain.handle('show-file-in-folder', async (_, filePath: string) => {
+  try {
+    const { shell } = require('electron');
+    shell.showItemInFolder(filePath);
+    return { success: true };
+  } catch (error) {
+    console.error('Error showing file in folder:', error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+});
+
+// Get current platform info
+ipcMain.handle('get-platform-info', async () => {
+  return {
+    platform: process.platform,
+    arch: process.arch
+  };
 });
 
 ipcMain.handle('get-app-version', () => {

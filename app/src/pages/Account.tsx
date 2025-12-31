@@ -28,7 +28,9 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
   const [isSignOutModalOpen, setIsSignOutModalOpen] = useState(false);
   
   // Update checker state
-  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'no-update' | 'error'>('idle');
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'no-update' | 'error'>('idle');
+  const [downloadedFilePath, setDownloadedFilePath] = useState<string | null>(null);
+  const [platformInfo, setPlatformInfo] = useState<{platform: string; arch: string} | null>(null);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
 
@@ -84,6 +86,17 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
   }, []);
 
   // Update checker handlers
+  // Detect platform on mount
+  useEffect(() => {
+    const getPlatform = async () => {
+      if (window.electronAPI?.getPlatformInfo) {
+        const info = await window.electronAPI.getPlatformInfo();
+        setPlatformInfo(info);
+      }
+    };
+    getPlatform();
+  }, []);
+
   const handleCheckForUpdates = async () => {
     if (!window.electronAPI?.updaterCheckForUpdates) {
       setUpdateStatus('error');
@@ -111,8 +124,9 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
     setUpdateStatus('downloading');
     try {
       const result = await window.electronAPI.updaterDownloadUpdate();
-      if (result.success) {
-        setUpdateStatus('ready');
+      if (result.success && result.filePath) {
+        setDownloadedFilePath(result.filePath);
+        setUpdateStatus('downloaded');
       } else {
         console.error('Download failed:', result.error || result.message);
         
@@ -138,19 +152,27 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
     }
   };
 
-  const handleInstallUpdate = async () => {
-    if (!window.electronAPI?.updaterInstallUpdate) return;
+  const handleOpenDownloadedFile = async () => {
+    if (!downloadedFilePath || !window.electronAPI?.openDownloadedFile) return;
     
     try {
-      const result = await window.electronAPI.updaterInstallUpdate();
-      if (!result.success) {
-        console.error('Install failed:', result.error || result.message);
-        setUpdateStatus('error');
-      }
-      // If successful, the app will quit and restart - no need to update status
+      await window.electronAPI.openDownloadedFile(downloadedFilePath);
+      // Reset state after opening file
+      setUpdateStatus('no-update');
+      setDownloadedFilePath(null);
     } catch (error) {
-      console.error('Error installing update:', error);
+      console.error('Error opening downloaded file:', error);
       setUpdateStatus('error');
+    }
+  };
+  
+  const handleShowInFolder = async () => {
+    if (!downloadedFilePath || !window.electronAPI?.showFileInFolder) return;
+    
+    try {
+      await window.electronAPI.showFileInFolder(downloadedFilePath);
+    } catch (error) {
+      console.error('Error showing file in folder:', error);
     }
   };
 
@@ -453,17 +475,31 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
                     </button>
                   )}
                   
-                  {updateStatus === 'ready' && (
-                    <button
-                      onClick={handleInstallUpdate}
-                      className={`px-4 py-2 text-sm rounded font-medium ${
-                        darkMode 
-                          ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                          : 'bg-orange-600 hover:bg-orange-700 text-white'
-                      }`}
-                    >
-                      Install & Restart
-                    </button>
+                  {updateStatus === 'downloaded' && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleOpenDownloadedFile}
+                        className={`px-4 py-2 text-sm rounded font-medium ${
+                          darkMode 
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                      >
+                        {platformInfo?.platform === 'darwin' ? 'Open DMG' : 
+                         platformInfo?.platform === 'win32' ? 'Run Installer' : 
+                         'Open File'}
+                      </button>
+                      <button
+                        onClick={handleShowInFolder}
+                        className={`px-2 py-2 text-sm rounded font-medium ${
+                          darkMode 
+                            ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+                            : 'bg-gray-600 hover:bg-gray-700 text-white'
+                        }`}
+                      >
+                        Show in {platformInfo?.platform === 'win32' ? 'Explorer' : 'Finder'}
+                      </button>
+                    </div>
                   )}
                   
                   {(updateStatus === 'no-update' || updateStatus === 'error') && (
@@ -477,6 +513,28 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
                     >
                       Check Again
                     </button>
+                  )}
+                  
+                  {/* Platform-specific helpful messages */}
+                  {updateStatus === 'downloading' && (
+                    <p className={`text-xs mt-2 ${
+                      darkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      Downloading update to Downloads folder...
+                    </p>
+                  )}
+                  
+                  {updateStatus === 'downloaded' && platformInfo && (
+                    <p className={`text-xs mt-2 ${
+                      darkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      {platformInfo.platform === 'darwin' && 
+                        'Update downloaded! Open the DMG and drag Archivist to Applications to replace the current version.'}
+                      {platformInfo.platform === 'win32' && 
+                        'Update downloaded! Run the installer to update Archivist.'}
+                      {platformInfo.platform === 'linux' && 
+                        'Update downloaded! Replace your current AppImage with the new version.'}
+                    </p>
                   )}
                   
                   {updateStatus === 'checking' && (
