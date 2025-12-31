@@ -118,57 +118,66 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
     }
   };
 
-  const handleDownloadUpdate = async () => {
+  const handleDownloadAndInstall = async () => {
     if (!window.electronAPI?.updaterDownloadUpdate) return;
     
+    console.log('=== STARTING UPDATE PROCESS ===');
     setUpdateStatus('downloading');
+    
     try {
+      console.log('Calling updaterDownloadUpdate...');
       const result = await window.electronAPI.updaterDownloadUpdate();
+      console.log('Download result:', result);
+      
       if (result.success && result.filePath) {
+        console.log(`✅ Download successful, file at: ${result.filePath}`);
         setDownloadedFilePath(result.filePath);
         setUpdateStatus('downloaded');
+        
+        // Automatically try to open the file
+        console.log('Attempting to open downloaded file...');
+        if (window.electronAPI?.openDownloadedFile) {
+          try {
+            const openResult = await window.electronAPI.openDownloadedFile(result.filePath);
+            console.log('Open file result:', openResult);
+            
+            if (openResult.success) {
+              console.log('✅ File opened successfully');
+              // Reset state since user now has the installer open
+              setTimeout(() => {
+                setUpdateStatus('no-update');
+                setDownloadedFilePath(null);
+              }, 2000);
+            } else {
+              console.error('❌ Failed to open file:', openResult.error);
+            }
+          } catch (openError) {
+            console.error('❌ Error opening file:', openError);
+          }
+        }
       } else {
-        console.error('Download failed:', result.error || result.message);
+        console.error('❌ Download failed:', result.error || result.message);
         
         // Handle manual download redirect
         if (result.redirectUrl && window.electronAPI?.openExternal) {
           console.log('Redirecting to GitHub releases for manual download');
           await window.electronAPI.openExternal(result.redirectUrl);
-          setUpdateStatus('no-update'); // Reset to allow checking again
-        } else if (result.message?.includes('development') || result.message?.includes('Manual download')) {
-          // Fallback redirect for development or manual download
-          if (updateInfo?.version && window.electronAPI?.openExternal) {
-            const downloadUrl = `https://github.com/rmacfarlane24/archivist/releases/tag/v${updateInfo.version}`;
-            await window.electronAPI.openExternal(downloadUrl);
-          }
-          setUpdateStatus('no-update'); // Reset to allow checking again
+          setUpdateStatus('no-update');
         } else {
           setUpdateStatus('error');
         }
       }
     } catch (error) {
-      console.error('Error downloading update:', error);
+      console.error('❌ Error in download process:', error);
       setUpdateStatus('error');
     }
   };
 
-  const handleOpenDownloadedFile = async () => {
-    if (!downloadedFilePath || !window.electronAPI?.openDownloadedFile) return;
-    
-    try {
-      await window.electronAPI.openDownloadedFile(downloadedFilePath);
-      // Reset state after opening file
-      setUpdateStatus('no-update');
-      setDownloadedFilePath(null);
-    } catch (error) {
-      console.error('Error opening downloaded file:', error);
-      setUpdateStatus('error');
-    }
-  };
-  
+  // Show file in Downloads folder if user wants to see it
   const handleShowInFolder = async () => {
     if (!downloadedFilePath || !window.electronAPI?.showFileInFolder) return;
     
+    console.log(`Showing file in folder: ${downloadedFilePath}`);
     try {
       await window.electronAPI.showFileInFolder(downloadedFilePath);
     } catch (error) {
@@ -455,14 +464,14 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
                   
                   {updateStatus === 'available' && (
                     <button
-                      onClick={handleDownloadUpdate}
+                      onClick={handleDownloadAndInstall}
                       className={`px-4 py-2 text-sm rounded font-medium ${
                         darkMode 
                           ? 'bg-green-600 hover:bg-green-700 text-white' 
                           : 'bg-green-600 hover:bg-green-700 text-white'
                       }`}
                     >
-                      Update Now
+                      Install Update
                     </button>
                   )}
                   
@@ -478,26 +487,24 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
                   {updateStatus === 'downloaded' && (
                     <div className="flex gap-2">
                       <button
-                        onClick={handleOpenDownloadedFile}
+                        onClick={handleDownloadAndInstall}
                         className={`px-4 py-2 text-sm rounded font-medium ${
                           darkMode 
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            ? 'bg-green-600 hover:bg-green-700 text-white' 
+                            : 'bg-green-600 hover:bg-green-700 text-white'
                         }`}
                       >
-                        {platformInfo?.platform === 'darwin' ? 'Open DMG' : 
-                         platformInfo?.platform === 'win32' ? 'Run Installer' : 
-                         'Open File'}
+                        Install Update
                       </button>
                       <button
                         onClick={handleShowInFolder}
-                        className={`px-2 py-2 text-sm rounded font-medium ${
+                        className={`px-2 py-2 text-xs rounded font-medium ${
                           darkMode 
                             ? 'bg-gray-600 hover:bg-gray-700 text-white' 
                             : 'bg-gray-600 hover:bg-gray-700 text-white'
                         }`}
                       >
-                        Show in {platformInfo?.platform === 'win32' ? 'Explorer' : 'Finder'}
+                        Show File
                       </button>
                     </div>
                   )}
@@ -520,7 +527,7 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
                     <p className={`text-xs mt-2 ${
                       darkMode ? 'text-gray-400' : 'text-gray-600'
                     }`}>
-                      Downloading update to Downloads folder...
+                      Downloading update... Check console for details.
                     </p>
                   )}
                   
@@ -529,11 +536,11 @@ export const Account: React.FC<AccountProps> = ({ darkMode, setDarkMode, prefere
                       darkMode ? 'text-gray-400' : 'text-gray-600'
                     }`}>
                       {platformInfo.platform === 'darwin' && 
-                        'Update downloaded! Open the DMG and drag Archivist to Applications to replace the current version.'}
+                        'Update ready! The installer should have opened automatically. If not, click Install Update again.'}
                       {platformInfo.platform === 'win32' && 
-                        'Update downloaded! Run the installer to update Archivist.'}
+                        'Update ready! The installer should have opened automatically. If not, click Install Update again.'}
                       {platformInfo.platform === 'linux' && 
-                        'Update downloaded! Replace your current AppImage with the new version.'}
+                        'Update ready! Click Install Update to open the new AppImage.'}
                     </p>
                   )}
                   

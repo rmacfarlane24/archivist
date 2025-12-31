@@ -3636,32 +3636,41 @@ ipcMain.handle('updater-download-update', async () => {
     // For packaged apps, use electron-updater for download, then copy to Downloads
     if (app.isPackaged) {
       try {
-        console.log('Downloading update via electron-updater...');
+        console.log('=== UPDATE DOWNLOAD START ===');
+        console.log(`Platform: ${platform}, Arch: ${arch}`);
+        console.log(`Expected filename: ${fileName}`);
+        console.log(`Download URL would be: ${downloadUrl}`);
+        console.log('Starting electron-updater download...');
         
         // Use electron-updater to download (handles redirects and platform detection)
         const downloadPromise = new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
+            console.error('Download timeout after 5 minutes');
             reject(new Error('Download timeout'));
           }, 300000); // 5 minute timeout
           
           autoUpdater.once('update-downloaded', (info) => {
+            console.log('update-downloaded event fired:', info);
             clearTimeout(timeout);
             resolve(info);
           });
           
           autoUpdater.once('error', (error) => {
+            console.error('autoUpdater error:', error);
             clearTimeout(timeout);
             reject(error);
           });
         });
         
         // Start the download
+        console.log('Calling autoUpdater.downloadUpdate()...');
         await autoUpdater.downloadUpdate();
         
         // Wait for download to complete
+        console.log('Waiting for download to complete...');
         const updateInfo = await downloadPromise;
         
-        console.log('Update downloaded by electron-updater, now copying to Downloads...');
+        console.log('=== DOWNLOAD COMPLETED, LOOKING FOR FILE ===');
         
         // Find the downloaded file in electron-updater's cache and copy to Downloads
         const fs = require('fs');
@@ -3670,65 +3679,106 @@ ipcMain.handle('updater-download-update', async () => {
         
         // electron-updater typically stores files in app cache directory
         const app = require('electron').app;
-        const cacheDir = path.join(app.getPath('userData'), 'pending');
+        const userDataPath = app.getPath('userData');
+        const tempPath = app.getPath('temp');
         const downloadedPath = path.join(os.homedir(), 'Downloads', fileName);
+        
+        console.log(`User data path: ${userDataPath}`);
+        console.log(`Temp path: ${tempPath}`);
+        console.log(`Target downloads path: ${downloadedPath}`);
         
         // Try to find the downloaded file (electron-updater may name it differently)
         let sourceFile = null;
         
         // Common locations where electron-updater might store the file
         const possiblePaths = [
-          path.join(cacheDir, fileName),
-          path.join(cacheDir, 'update.dmg'),
-          path.join(cacheDir, 'update.exe'),
-          path.join(cacheDir, 'update.AppImage'),
+          path.join(userDataPath, 'pending', fileName),
+          path.join(userDataPath, 'pending', 'update.dmg'),
+          path.join(userDataPath, 'pending', 'update.exe'),
+          path.join(userDataPath, 'pending', 'update.AppImage'),
+          path.join(userDataPath, fileName),
+          path.join(tempPath, fileName),
+          path.join(tempPath, 'update.dmg'),
+          path.join(tempPath, 'update.exe'),
+          path.join(tempPath, 'ArchiCryst-updater', fileName),
+          // Try some other common electron-updater paths
+          path.join(userDataPath, 'pending', 'update'),
+          path.join(userDataPath, '.cache', fileName)
         ];
         
-        // Also check the app's temp directory
-        const tempDir = app.getPath('temp');
-        possiblePaths.push(
-          path.join(tempDir, fileName),
-          path.join(tempDir, 'update.dmg'),
-          path.join(tempDir, 'update.exe')
-        );
-        
-        for (const possiblePath of possiblePaths) {
-          if (fs.existsSync(possiblePath)) {
-            sourceFile = possiblePath;
-            console.log(`Found downloaded file at: ${possiblePath}`);
-            break;
+        console.log('Searching for downloaded file in these locations:');
+        for (let i = 0; i < possiblePaths.length; i++) {
+          const possiblePath = possiblePaths[i];
+          console.log(`[${i + 1}] Checking: ${possiblePath}`);
+          
+          try {
+            if (fs.existsSync(possiblePath)) {
+              const stats = fs.statSync(possiblePath);
+              console.log(`  → FOUND! Size: ${stats.size} bytes, Modified: ${stats.mtime}`);
+              sourceFile = possiblePath;
+              break;
+            } else {
+              console.log('  → Not found');
+            }
+          } catch (error) {
+            console.log(`  → Error checking: ${error instanceof Error ? error.message : String(error)}`);
           }
         }
         
         if (!sourceFile) {
-          // If we can't find the file, the download still completed via electron-updater
-          // So we'll just provide a fallback path and let the user know
-          console.warn('Could not locate downloaded file in cache, but download completed');
+          console.error('=== FILE NOT FOUND IN CACHE ===');
+          console.log('Listing contents of key directories:');
+          
+          // List contents of pending directory
+          const pendingDir = path.join(userDataPath, 'pending');
+          try {
+            const pendingContents = fs.readdirSync(pendingDir);
+            console.log(`Pending directory (${pendingDir}):`, pendingContents);
+          } catch (e) {
+            console.log(`Pending directory doesn't exist or can't read: ${e instanceof Error ? e.message : String(e)}`);
+          }
+          
+          // List contents of userData
+          try {
+            const userDataContents = fs.readdirSync(userDataPath);
+            console.log(`User data directory (${userDataPath}):`, userDataContents);
+          } catch (e) {
+            console.log(`Can't read user data directory: ${e instanceof Error ? e.message : String(e)}`);
+          }
+          
           return { 
-            success: true, 
-            filePath: downloadedPath,
-            message: 'Download completed. File should be available in your Downloads folder or app cache.'
+            success: false, 
+            error: 'Downloaded file not found in expected locations. Check console for details.' 
           };
         }
+        
+        console.log(`=== COPYING FILE ===`);
+        console.log(`From: ${sourceFile}`);
+        console.log(`To: ${downloadedPath}`);
         
         // Copy the file to Downloads with proper name
         try {
           fs.copyFileSync(sourceFile, downloadedPath);
-          console.log(`Copied update file to: ${downloadedPath}`);
+          
+          // Verify the copy worked
+          const copiedStats = fs.statSync(downloadedPath);
+          console.log(`✅ Copy successful! Downloaded file size: ${copiedStats.size} bytes`);
+          console.log(`File location: ${downloadedPath}`);
           
           return { success: true, filePath: downloadedPath };
         } catch (copyError) {
-          console.error('Failed to copy file to Downloads:', copyError);
+          console.error('❌ Failed to copy file to Downloads:', copyError);
           // Still return success since the file was downloaded, just tell user where it is
           return { 
             success: true, 
             filePath: sourceFile,
-            message: 'Download completed. File is available in app cache - click to open.'
+            message: `Download completed but copy failed. File is at: ${sourceFile}`
           };
         }
         
       } catch (error) {
-        console.error('Download failed:', error);
+        console.error('=== DOWNLOAD FAILED ===');
+        console.error('Error details:', error);
         return { success: false, error: error instanceof Error ? error.message : String(error) };
       }
     }
